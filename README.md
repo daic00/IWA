@@ -52,6 +52,7 @@ npm start
 ## 文档
 
 - [快速开始指南](QUICKSTART.md) - 详细的3步部署指南
+- [IIS部署指南](IIS_DEPLOYMENT.md) - Windows IIS服务器部署完整指南
 - [会议功能说明](CONFERENCE_FEATURES.md) - 费用支付和摘要提交功能
 - [后端API文档](server/README.md) - API文档和数据库设计
 
