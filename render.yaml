@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: iwa-conference
+    env: node
+    buildCommand: cd server && npm install && npm run init-db
+    startCommand: cd server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        value: Admin@2025

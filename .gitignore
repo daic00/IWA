@@ -32,4 +32,11 @@ node_modules/
 .env
 .env.local
 
+# Database (每个环境独立)
+server/database/*.db
+server/database/*.db-shm
+server/database/*.db-wal
 
+# Uploads (用户上传的文件)
+server/uploads/*
+!server/uploads/.gitkeep
