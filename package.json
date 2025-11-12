@@ -1,0 +1,15 @@
+{
+  "name": "iwa-conference-website",
+  "version": "1.0.0",
+  "description": "IWA Conference Management Website",
+  "scripts": {
+    "start": "live-server --port=8080 --open=/profile.html",
+    "dev": "live-server --port=8080"
+  },
+  "keywords": ["conference", "website", "static"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}

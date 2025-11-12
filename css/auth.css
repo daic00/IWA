@@ -1,0 +1,390 @@
+/* Authentication Pages Styles */
+/* Used by: login.html, register.html, reset-password.html */
+
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #1a5490 0%, #0d3a6f 100%);
+    min-height: 100vh;
+}
+
+/* Main Container */
+.login-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.5rem;
+    min-height: 100vh;
+}
+
+.login-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    padding: 3rem 2.5rem;
+    max-width: 480px;
+    width: 100%;
+}
+
+/* Header Section */
+.login-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.login-header h1 {
+    color: #1a5490;
+    font-size: 1.6rem;
+    margin-bottom: 0.5rem;
+}
+
+.login-header p {
+    color: #666;
+    font-size: 0.95rem;
+}
+
+/* Form Elements */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #333;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.form-group label .required {
+    color: #e74c3c;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #1a5490;
+    box-shadow: 0 0 0 3px rgba(26, 84, 144, 0.1);
+}
+
+/* 隐藏浏览器默认的密码显示图标 */
+.form-input[type="password"]::-ms-reveal,
+.form-input[type="password"]::-ms-clear {
+    display: none;
+}
+
+.form-input[type="password"]::-webkit-credentials-auto-fill-button,
+.form-input[type="password"]::-webkit-caps-lock-indicator {
+    display: none;
+}
+
+input[type="password"]::-webkit-textfield-decoration-container {
+    display: none;
+}
+
+/* Password Field */
+.password-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-wrapper .form-input {
+    padding-right: 3rem;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #666;
+    cursor: pointer;
+    padding: 0.5rem;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+    z-index: 10;
+}
+
+.password-toggle:hover {
+    color: #1a5490;
+}
+
+.password-toggle:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+/* Forgot Password Link */
+.forgot-password-wrapper {
+    text-align: right;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.forgot-password {
+    color: #1a5490;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.forgot-password:hover {
+    text-decoration: underline;
+}
+
+/* Help Content (for reset password page) */
+.help-content {
+    text-align: center;
+    padding: 2rem 0;
+}
+
+.help-icon {
+    font-size: 4rem;
+    color: #1a5490;
+    margin-bottom: 1.5rem;
+}
+
+.help-text {
+    color: #333;
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+}
+
+.contact-info {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    color: #1a5490;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.contact-item i {
+    font-size: 1.25rem;
+}
+
+.help-note {
+    color: #666;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+.back-link {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.back-link a {
+    color: #1a5490;
+    text-decoration: none;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.back-link a:hover {
+    text-decoration: underline;
+}
+
+/* Buttons */
+.btn-login,
+.btn-register,
+.btn-reset {
+    width: 100%;
+    padding: 1rem;
+    background: #1a5490;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-login:hover,
+.btn-register:hover,
+.btn-reset:hover {
+    background: #0d3a6f;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(26, 84, 144, 0.3);
+}
+
+.btn-login:disabled,
+.btn-register:disabled,
+.btn-reset:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Divider */
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 2rem 0;
+    color: #999;
+    font-size: 0.9rem;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.divider span {
+    padding: 0 1rem;
+}
+
+/* Links */
+.register-link,
+.login-link {
+    text-align: center;
+    font-size: 0.95rem;
+    color: #666;
+}
+
+.register-link a,
+.login-link a {
+    color: #1a5490;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.register-link a:hover,
+.login-link a:hover {
+    color: #0d3a6f;
+    text-decoration: underline;
+}
+
+.back-to-home,
+.back-link {
+    text-align: center;
+    margin-top: 1.5rem;
+}
+
+.back-to-home a,
+.back-link a {
+    color: #1a5490;
+    text-decoration: none;
+    font-size: 0.95rem;
+    transition: color 0.3s ease;
+}
+
+.back-to-home a:hover,
+.back-link a:hover {
+    color: #0d3a6f;
+    text-decoration: underline;
+}
+
+.back-to-home i,
+.back-link i {
+    margin-right: 0.5rem;
+}
+
+/* Messages */
+.success-message {
+    background: #d4edda;
+    color: #155724;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    display: none;
+    text-align: center;
+}
+
+.error-message {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    display: none;
+    text-align: center;
+}
+
+.success-message i,
+.error-message i {
+    margin-right: 0.5rem;
+}
+
+/* Register Page Specific Styles */
+.btn-send-code {
+    padding: 0.875rem 1.5rem;
+    background: #1a5490;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.btn-send-code:hover {
+    background: #0d3a6f;
+}
+
+.btn-send-code:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .login-container {
+        padding: 1.5rem 1rem;
+    }
+
+    .login-card {
+        padding: 2.5rem 1.5rem;
+    }
+
+    .login-header {
+        margin-bottom: 2rem;
+    }
+
+    .login-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .forgot-password-wrapper {
+        font-size: 0.85rem;
+    }
+}

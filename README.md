@@ -1,158 +1,109 @@
-# 2025 International Conference on Sustainable Urban Water Systems
+# IWA SUWS 2025 Conference Management System
 
-A responsive, modern website for the 2025 IWA-supported International Conference on Sustainable Urban Water Systems.
+国际水协会（IWA）可持续城市水系统会议管理系统
 
-## Conference Information
+## 功能特性
 
-**Theme:** Resilient, Inclusive & Smart Water Futures  
-**Dates:** December 18-20, 2025  
-**Location:** Shanghai, China  
-**Organized by:** Tongji University, College of Environmental Science and Engineering  
-**Supported by:** International Water Association (IWA)
+### 用户功能
+- 用户注册与登录
+- 会议费用支付管理
+- 论文摘要提交
+- 个人信息管理
+- 密码修改与重置
 
-## Website Features
+### 管理员功能
+- 用户管理（增删改查）
+- 用户搜索
+- 密码重置
+- 用户统计
+- 操作日志记录
 
-- ✅ Fully responsive design (mobile, tablet, desktop)
-- ✅ Modern, clean UI inspired by IWA Biofilms 2024 conference
-- ✅ Pure English content
-- ✅ Multi-page structure with comprehensive information
-- ✅ Interactive navigation with dropdown menus
-- ✅ Smooth animations and transitions
-- ✅ Accessible and SEO-friendly
+## 快速开始
 
-## Pages Included
-
-1. **Home** - Conference overview and highlights
-2. **Call for Papers** - Submission guidelines and themes
-3. **Conference Program** - Detailed schedule and sessions
-4. **Committees** - Organizing and programme committees
-5. **Venue** - Location, accommodation, and travel information
-6. **Registration** - Registration fees and procedures
-7. **Contact** - Contact information and inquiry topics
-
-## Technology Stack
-
-- **HTML5** - Semantic markup
-- **CSS3** - Modern styling with CSS Grid and Flexbox
-- **JavaScript** - Interactive features and animations
-- **Font Awesome 6** - Icons
-- **No frameworks** - Pure vanilla HTML/CSS/JS for fast loading
-
-## Project Structure
-
-```
-├── index.html                  # Home page
-├── call-for-papers.html       # Call for papers page
-├── program.html               # Conference program page
-├── committees.html            # Committees page
-├── venue.html                 # Venue and travel page
-├── registration.html          # Registration page
-├── contact.html               # Contact page
-├── css/
-│   ├── style.css             # Main stylesheet
-│   └── pages.css             # Page-specific styles
-├── js/
-│   └── script.js             # Interactive functionality
-├── images/                    # Image assets
-│   ├── iwa-logo.png          # IWA logo (add your logo here)
-│   └── water-bg.jpg          # Hero background (optional)
-└── README.md                  # This file
+### 安装依赖
+```powershell
+cd server
+npm install
 ```
 
-## Setup Instructions
-
-1. **Clone or download** this repository
-2. **Add required images** to the `images/` folder:
-   - `iwa-logo.png` - IWA/Conference logo
-   - `water-bg.jpg` - Hero section background (optional)
-3. **Open** `index.html` in a web browser
-4. **Customize** content as needed
-
-## Customization Guide
-
-### Colors
-
-Edit CSS variables in `css/style.css`:
-
-```css
-:root {
-    --primary-color: #0066cc;      /* Main brand color */
-    --secondary-color: #00a7e1;    /* Accent color */
-    --text-dark: #333333;          /* Dark text */
-    --text-light: #666666;         /* Light text */
-}
+### 初始化数据库
+```powershell
+npm run init-db
 ```
 
-### Content Updates
+### 启动服务器
+```powershell
+npm start
+```
 
-- **Committee members**: Edit `committees.html`
-- **Schedule details**: Edit `program.html`
-- **Registration fees**: Edit `registration.html`
-- **Contact information**: Update in all HTML files (footer section)
-- **Conference dates**: Update across all pages
+### 访问系统
+- 首页: http://localhost:3000
+- 用户登录: http://localhost:3000/login.html
+- 用户注册: http://localhost:3000/register.html
+- 管理员登录: http://localhost:3000/admin/login.html
 
-### Logo
+### 默认管理员账号
+```
+用户名: admin
+密码: Admin@2025
+```
+首次登录后请立即修改密码！
 
-Replace `images/iwa-logo.png` with your conference logo. Recommended size: 200x80px (height: 40-50px works best)
+## 文档
 
-## Browser Support
+- [快速开始指南](QUICKSTART.md) - 详细的3步部署指南
+- [会议功能说明](CONFERENCE_FEATURES.md) - 费用支付和摘要提交功能
+- [后端API文档](server/README.md) - API文档和数据库设计
 
-- Chrome (latest)
-- Firefox (latest)
-- Safari (latest)
-- Edge (latest)
-- Mobile browsers (iOS Safari, Chrome Mobile)
+## 技术栈
 
-## Responsive Breakpoints
+### 前端
+- HTML5, CSS3, JavaScript (原生)
+- Font Awesome 6.0 图标库
+- 响应式设计
 
-- **Desktop**: > 968px
-- **Tablet**: 768px - 968px
-- **Mobile**: < 768px
-- **Small Mobile**: < 480px
+### 后端
+- Node.js + Express 4.18
+- SQLite (better-sqlite3)
+- bcrypt 密码加密
+- express-session 会话管理
+- multer 文件上传
 
-## Performance Features
+### 数据库
+- SQLite 3
+- 用户表、费用支付表、摘要提交表
+- 管理员操作日志
 
-- Optimized CSS with minimal redundancy
-- Efficient JavaScript with event delegation
-- Lazy loading compatible structure
-- Clean, semantic HTML for fast rendering
+## 项目结构
+```
+IWA/
+├── server/              # 后端服务
+│   ├── server.js       # 主服务器
+│   ├── database/       # 数据库相关
+│   ├── routes/         # API路由
+│   ├── middleware/     # 中间件
+│   └── uploads/        # 文件上传目录
+├── admin/              # 管理员页面
+├── css/                # 样式文件
+├── js/                 # JavaScript文件
+├── images/             # 图片资源
+└── *.html              # 前端页面
+```
 
-## Accessibility
+## 安全特性
 
-- Semantic HTML5 elements
-- ARIA labels for interactive elements
-- Keyboard navigation support
-- High contrast color scheme
-- Readable font sizes
+- 密码加密存储（bcrypt）
+- 用户名唯一性验证
+- Session 会话管理
+- 防止 SQL 注入（参数化查询）
+- 管理员操作日志
+- 密码强度验证（最少6字符）
+- 文件上传类型和大小限制
 
-## Future Enhancements (Optional)
+## 许可证
 
-- [ ] Add online registration form with backend integration
-- [ ] Implement abstract submission system
-- [ ] Add photo gallery section
-- [ ] Include conference proceedings download
-- [ ] Add live streaming capability
-- [ ] Integrate with payment gateway
-- [ ] Add multi-language support (Chinese/English toggle)
+MIT License
 
-## License
+## 联系方式
 
-This website template is created for the 2025 International Conference on Sustainable Urban Water Systems.
-
-## Contact
-
-**Conference Secretariat:**  
-Email: suws2025@tongji.edu.cn  
-Phone: +86 021-65986919  
-Address: College of Environmental Science and Engineering, Tongji University, 1239 Siping Road, Shanghai 200092, China
-
-## Credits
-
-Design inspired by: IWA Biofilms 2024 Conference (https://iwabiofilm2024.tongji.edu.cn/)  
-Icons: Font Awesome (https://fontawesome.com/)
-
----
-
-**Last Updated:** October 2025  
-**Version:** 1.0
-
+会议官方邮箱: suws2025@tongji.edu.cn

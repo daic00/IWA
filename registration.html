@@ -180,7 +180,10 @@
                 <div class="content-block cta-box">
                     <h3><i class="fas fa-ticket-alt"></i> Register for the Conference</h3>
                     <p>Secure your spot at this premier water systems conference</p>
-                    <a href="#" class="btn btn-primary">Online Registration</a>
+                    <button id="registrationBtn" class="btn btn-primary">
+                        <i class="fas fa-spinner fa-spin" id="btnLoader" style="display: none;"></i>
+                        <span id="btnText">Online Registration</span>
+                    </button>
                     <p class="note">Registration system will open soon</p>
                 </div>
             </div>
@@ -239,6 +242,43 @@
     </footer>
 
     <script src="js/script.js"></script>
+    <script>
+        // 检查用户登录状态并智能跳转
+        document.getElementById('registrationBtn').addEventListener('click', async function() {
+            const btn = this;
+            const btnText = document.getElementById('btnText');
+            const btnLoader = document.getElementById('btnLoader');
+            
+            // 显示加载状态
+            btn.disabled = true;
+            btnLoader.style.display = 'inline-block';
+            btnText.textContent = 'Checking...';
+            
+            try {
+                // 检查用户是否已登录
+                const response = await fetch('/api/auth/me', {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.user) {
+                        // 已登录，跳转到个人中心
+                        window.location.href = 'profile.html';
+                        return;
+                    }
+                }
+                
+                // 未登录，跳转到登录页
+                window.location.href = 'login.html';
+                
+            } catch (error) {
+                console.error('Check login status failed:', error);
+                // 出错时也跳转到登录页
+                window.location.href = 'login.html';
+            }
+        });
+    </script>
 </body>
 </html>
 
