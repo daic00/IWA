@@ -131,34 +131,87 @@ router.get('/fee-payment', requireAuth, (req, res) => {
     }
 });
 
+// 文件名编码修复中间件（在 multer 之后执行）
+function fixFilenameEncoding(req, res, next) {
+    if (req.file && req.file.originalname) {
+        try {
+            let filename = req.file.originalname;
+            
+            // 关键修复：multer 将 UTF-8 文件名错误地解释为 latin1
+            // 需要将 latin1 字节重新解释为 UTF-8
+            const fixed = Buffer.from(filename, 'latin1').toString('utf8');
+            
+            // 验证修复后的文件名是否更合理
+            // 检查是否包含更多有效的中文字符
+            const originalChineseCount = (filename.match(/[\u4e00-\u9fff]/g) || []).length;
+            const fixedChineseCount = (fixed.match(/[\u4e00-\u9fff]/g) || []).length;
+            
+            // 如果修复后的版本包含更多中文，或者原版完全没有中文但修复后有，使用修复后的版本
+            if (fixedChineseCount > originalChineseCount || (originalChineseCount === 0 && fixedChineseCount > 0)) {
+                req.file.originalname = fixed;
+                console.log('Fixed filename encoding:', filename, '->', fixed);
+            }
+        } catch (error) {
+            console.warn('Filename encoding fix error:', error.message);
+        }
+    }
+    next();
+}
+
 // 提交摘要
-router.post('/abstract', requireAuth, upload.single('file'), async (req, res) => {
+router.post('/abstract', requireAuth, upload.single('file'), fixFilenameEncoding, async (req, res) => {
     try {
-        const { title, authors, affiliation, abstract, keywords } = req.body;
+        const { title, authors, affiliation, topic, abstract, keywords } = req.body;
         
         // 验证必填字段
-        if (!title || !authors || !affiliation || !abstract || !keywords) {
+        if (!title || !authors || !affiliation || !topic) {
             return res.json({
                 success: false,
-                message: 'All fields are required'
+                message: 'Title, authors, affiliation, and topic are required'
+            });
+        }
+        
+        // 确保 topic 是有效的数字（1-7）
+        const topicNumber = parseInt(topic, 10);
+        if (isNaN(topicNumber) || topicNumber < 1 || topicNumber > 7) {
+            return res.json({
+                success: false,
+                message: 'Topic must be a number between 1 and 7'
             });
         }
         
         const userId = req.session.userId;
         const filePath = req.file ? req.file.filename : null;
+        // 文件名已经在中间件中修复，直接使用
+        const originalFilename = req.file ? req.file.originalname : null;
         
         // 检查是否已存在
-        const existing = db.prepare('SELECT id FROM abstract_submissions WHERE user_id = ?').get(userId);
+        const existing = db.prepare('SELECT id, file_path FROM abstract_submissions WHERE user_id = ?').get(userId);
         
         if (existing) {
+            // 如果上传了新文件且存在旧文件，删除旧文件
+            if (filePath && existing.file_path && existing.file_path !== filePath) {
+                try {
+                    const oldFilePath = path.join(__dirname, '../uploads', existing.file_path);
+                    if (fs.existsSync(oldFilePath)) {
+                        fs.unlinkSync(oldFilePath);
+                        console.log('Deleted old file:', existing.file_path);
+                    }
+                } catch (error) {
+                    // 删除旧文件失败不影响新文件保存，只记录警告
+                    console.warn('Failed to delete old file:', existing.file_path, error.message);
+                }
+            }
+            
             // 更新现有记录
             db.prepare(`
                 UPDATE abstract_submissions SET
-                    title = ?, authors = ?, affiliation = ?, abstract = ?,
-                    keywords = ?, file_path = COALESCE(?, file_path),
+                    title = ?, authors = ?, affiliation = ?, topic = ?,
+                    abstract = ?, keywords = ?, file_path = COALESCE(?, file_path),
+                    original_filename = COALESCE(?, original_filename),
                     updated_at = CURRENT_TIMESTAMP
                 WHERE user_id = ?
-            `).run(title, authors, affiliation, abstract, keywords, filePath, userId);
+            `).run(title, authors, affiliation, topicNumber, abstract, keywords, filePath, originalFilename, userId);
             
             res.json({
                 success: true,
@@ -169,9 +222,9 @@ router.post('/abstract', requireAuth, upload.single('file'), async (req, res) =>
             // 插入新记录
             const result = db.prepare(`
                 INSERT INTO abstract_submissions (
-                    user_id, title, authors, affiliation, abstract, keywords, file_path
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
-            `).run(userId, title, authors, affiliation, abstract, keywords, filePath);
+                    user_id, title, authors, affiliation, topic, abstract, keywords, file_path, original_filename
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(userId, title, authors, affiliation, topicNumber, abstract, keywords, filePath, originalFilename);
             
             res.json({
                 success: true,
@@ -194,6 +247,13 @@ router.get('/abstract', requireAuth, (req, res) => {
     try {
         const userId = req.session.userId;
         const submission = db.prepare('SELECT * FROM abstract_submissions WHERE user_id = ?').get(userId);
+        
+        if (submission) {
+            // 确保 topic 是整数类型（SQLite INTEGER 应该返回整数，但保险起见进行转换）
+            if (submission.topic !== null && submission.topic !== undefined) {
+                submission.topic = Math.floor(Number(submission.topic));
+            }
+        }
         
         res.json({
             success: true,

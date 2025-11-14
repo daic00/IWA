@@ -105,7 +105,21 @@
         </div>
     </div>
 
+    <script src="js/modal.js"></script>
     <script>
+        // Load reusable modal component and initialize
+        (async function loadModalComponent() {
+            try {
+                const res = await fetch('components/modal.html');
+                const html = await res.text();
+                document.body.insertAdjacentHTML('beforeend', html);
+                if (typeof initModal === 'function') {
+                    initModal();
+                }
+            } catch (e) {
+                console.warn('Failed to load modal component:', e);
+            }
+        })();
         function togglePassword(inputId, iconId) {
             const passwordInput = document.getElementById(inputId);
             const toggleIcon = document.getElementById(iconId);
@@ -182,9 +196,29 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // 注册成功，跳转到个人中心
-                    alert('Registration successful! Welcome to IWA SUWS 2025!');
-                    window.location.href = 'profile.html';
+                    // 使用通用弹窗组件
+                    openModal({
+                        title: 'Registration Successful',
+                        body: 'Welcome to IWA SUWS 2025!',
+                        actions: [
+                            {
+                                text: 'Go to Profile',
+                                class: 'btn-primary',
+                                callback: () => { window.location.href = 'profile.html'; }
+                            }
+                        ]
+                    });
+                    // 即使用户关闭弹窗（X/ESC/点击遮罩），也跳转到 profile
+                    const modalEl = document.getElementById('modal');
+                    const doRedirect = () => { window.location.href = 'profile.html'; };
+                    if (modalEl) {
+                        const closeBtn = modalEl.querySelector('.modal-close');
+                        if (closeBtn) closeBtn.addEventListener('click', doRedirect, { once: true });
+                        const onBackdrop = (e) => { if (e.target === modalEl) doRedirect(); };
+                        modalEl.addEventListener('click', onBackdrop, { once: true });
+                        const onEsc = (e) => { if (e.key === 'Escape' && modalEl.classList.contains('active')) doRedirect(); };
+                        document.addEventListener('keydown', onEsc, { once: true });
+                    }
                 } else {
                     showError(data.message || 'Registration failed. Please try again.');
                     submitBtn.disabled = false;

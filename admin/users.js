@@ -1,6 +1,11 @@
 // 全局变量
 let allUsers = [];
 let currentEditUserId = null;
+// 分页相关
+let currentPage = 1;
+let pageSize = 10; // 初始 10
+let totalUsersCount = 0;
+let totalPages = 1;
 
 // 页面加载时检查管理员权限并加载数据
 async function init() {
@@ -28,16 +33,27 @@ async function checkAdminAuth() {
 // 加载用户列表
 async function loadUsers() {
     try {
-        const response = await fetch('/api/admin/users', {
+        // 显示加载中
+        const tbody = document.getElementById('usersTableBody');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #999;">Loading...</td></tr>';
+        }
+
+        const response = await fetch(`/api/admin/users?page=${currentPage}&pageSize=${pageSize}`, {
             credentials: 'include'
         });
-        
         const data = await response.json();
         
         if (data.success) {
-            allUsers = data.users;
+            allUsers = data.users || [];
+            totalUsersCount = data.total || 0;
+            currentPage = data.page || 1;
+            pageSize = data.pageSize || pageSize;
+            totalPages = Math.max(1, Math.ceil(totalUsersCount / pageSize));
             displayUsers(allUsers);
-            updateStats(allUsers);
+            updatePagination();
+            // 更新统计（来自后端统计接口）
+            await loadStats();
         } else {
             showError('Failed to load users');
         }
@@ -58,18 +74,19 @@ function displayUsers(users) {
     
     tbody.innerHTML = users.map(user => `
         <tr>
-            <td>${user.id}</td>
-            <td>${escapeHtml(user.name)}</td>
-            <td>${escapeHtml(user.username)}</td>
-            <td>${escapeHtml(user.organization)}</td>
-            <td>
-                <span class="user-badge ${user.is_admin ? 'badge-admin' : 'badge-user'}">
-                    ${user.is_admin ? '<i class="fas fa-shield-alt"></i> Admin' : '<i class="fas fa-user"></i> User'}
+            <td data-label="ID">${user.id}</td>
+            <td data-label="Name">${escapeHtml(user.name)}</td>
+            <td data-label="Username">${escapeHtml(user.username)}</td>
+            <td data-label="Organization">${escapeHtml(user.organization)}</td>
+            <td data-label="Role">
+                <span class="user-badge ${(Number(user.is_admin) === 1) ? 'badge-admin' : 'badge-user'}">
+                    ${(Number(user.is_admin) === 1) ? '<i class="fas fa-shield-alt"></i> Admin' : '<i class="fas fa-user"></i> User'}
                 </span>
             </td>
-            <td>${formatDate(user.created_at)}</td>
-            <td>
+            <td data-label="Registered">${formatDate(user.created_at)}</td>
+            <td data-label="Actions">
                 <div class="actions">
+                    ${(Number(user.is_admin) === 1) ? '' : '<button class="btn btn-secondary btn-sm" onclick="viewUserCM(' + user.id + ')"><i class="fas fa-eye"></i> View</button>'}
                     <button class="btn btn-primary btn-sm" onclick="openEditUserModal(${user.id})">
                         <i class="fas fa-edit"></i> Edit
                     </button>
@@ -86,11 +103,23 @@ function displayUsers(users) {
 }
 
 // 更新统计数据
-function updateStats(users) {
-    const totalUsers = users.length;
-    const totalAdmins = users.filter(u => u.is_admin).length;
-    const totalRegular = totalUsers - totalAdmins;
-    
+// 从后端统计接口更新仪表数据
+async function loadStats() {
+    try {
+        const resp = await fetch('/api/admin/stats', { credentials: 'include' });
+        const data = await resp.json();
+        if (data && data.success && data.stats) {
+            updateStatsFromServer(data.stats);
+        }
+    } catch (e) {
+        console.warn('Load stats failed:', e);
+    }
+}
+
+function updateStatsFromServer(stats) {
+    const totalUsers = stats.totalUsers || 0;
+    const totalAdmins = stats.totalAdmins || 0;
+    const totalRegular = Math.max(0, totalUsers - totalAdmins);
     document.getElementById('totalUsers').textContent = totalUsers;
     document.getElementById('totalAdmins').textContent = totalAdmins;
     document.getElementById('totalRegular').textContent = totalRegular;
@@ -101,6 +130,7 @@ function setupSearchListener() {
     const searchInput = document.getElementById('searchInput');
     searchInput.addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase();
+        // 仅过滤当前页数据
         const filtered = allUsers.filter(user => 
             user.name.toLowerCase().includes(query) ||
             user.username.toLowerCase().includes(query) ||
@@ -108,6 +138,53 @@ function setupSearchListener() {
         );
         displayUsers(filtered);
     });
+}
+
+// 渲染分页控件状态
+function updatePagination() {
+    const info = document.getElementById('pageInfo');
+    const prevBtn = document.getElementById('prevPageBtn');
+    const nextBtn = document.getElementById('nextPageBtn');
+    const sizeSel = document.getElementById('pageSizeSelect');
+    if (info) {
+        info.textContent = `Page ${currentPage} of ${Math.max(1, Math.ceil(totalUsersCount / pageSize))} · Total ${totalUsersCount}`;
+    }
+    if (prevBtn) prevBtn.disabled = currentPage <= 1;
+    if (nextBtn) nextBtn.disabled = currentPage >= Math.max(1, Math.ceil(totalUsersCount / pageSize));
+    if (sizeSel && Number(sizeSel.value) !== Number(pageSize)) sizeSel.value = String(pageSize);
+}
+
+// 绑定分页事件
+function setupPaginationControls() {
+    const prevBtn = document.getElementById('prevPageBtn');
+    const nextBtn = document.getElementById('nextPageBtn');
+    const sizeSel = document.getElementById('pageSizeSelect');
+    if (prevBtn) {
+        prevBtn.addEventListener('click', async () => {
+            if (currentPage > 1) {
+                currentPage -= 1;
+                await loadUsers();
+            }
+        });
+    }
+    if (nextBtn) {
+        nextBtn.addEventListener('click', async () => {
+            if (currentPage < Math.max(1, Math.ceil(totalUsersCount / pageSize))) {
+                currentPage += 1;
+                await loadUsers();
+            }
+        });
+    }
+    if (sizeSel) {
+        sizeSel.addEventListener('change', async (e) => {
+            const val = parseInt(e.target.value, 10);
+            if ([10,20,50,100].includes(val)) {
+                pageSize = val;
+                currentPage = 1;
+                await loadUsers();
+            }
+        });
+    }
 }
 
 // 打开添加用户模态框
@@ -133,7 +210,7 @@ function openEditUserModal(userId) {
     document.getElementById('userName').value = user.name;
     document.getElementById('userUsername').value = user.username;
     document.getElementById('userOrganization').value = user.organization;
-    document.getElementById('userIsAdmin').checked = user.is_admin === 1;
+    document.getElementById('userIsAdmin').checked = Number(user.is_admin) === 1;
     document.getElementById('passwordGroup').style.display = 'none';
     document.getElementById('userPassword').required = false;
     document.getElementById('modalError').style.display = 'none';
@@ -302,18 +379,22 @@ document.getElementById('resetPasswordForm').addEventListener('submit', async fu
 });
 
 // 登出
-async function logout() {
-    if (confirm('Are you sure you want to logout?')) {
-        try {
-            await fetch('/api/auth/logout', {
-                method: 'POST',
-                credentials: 'include'
-            });
-            window.location.href = '../index.html';
-        } catch (error) {
-            console.error('Logout error:', error);
+function logout() {
+    showConfirmDialog(
+        'Confirm Logout',
+        'Are you sure you want to logout?',
+        async () => {
+            try {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                window.location.href = '../index.html';
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
         }
-    }
+    );
 }
 
 // 工具函数
@@ -359,5 +440,255 @@ function showResetModalError(message) {
     errorDiv.style.display = 'block';
 }
 
+// ===== Read-only view: Conference Management =====
+const TOPIC_LABELS = {
+    1: 'Session 1: Water Quality Security and Digital Technology',
+    2: 'Session 2: Green Water Treatment and Resource Recycling',
+    3: 'Session 3: Water Environment Remediation and Healthy Cities',
+    4: 'Session 4: Environmental System Engineering and Risk Control',
+    5: 'Session 5: Industry-Academia-Research Forum',
+    6: 'Session 6: Journal Forum of Energy & Environmental Sustainability',
+    7: 'Session 7: Youth Student Forum'
+};
+
+function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = (value === 0 || value) ? String(value) : '-';
+}
+
+function formatAuthorsValue(raw) {
+    if (!raw) return '-';
+    try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+            const names = parsed.map(a => `${a.firstName || ''} ${a.surname || ''}`.trim()).filter(Boolean);
+            return names.length ? names.join(', ') : '-';
+        }
+    } catch (e) {
+        // not JSON, fall through
+    }
+    // legacy newline separated or plain string
+    return String(raw).trim() || '-';
+}
+
+// 仅以多行快速列表渲染作者：
+// 1) First Surname\n2) ...
+function renderAuthorsQuickOnly(raw) {
+    const quick = document.getElementById('cmAuthorsQuick');
+    if (!quick) return;
+    let authors = [];
+    try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) authors = parsed;
+    } catch (e) {
+        const lines = String(raw || '').split('\n').map(s => s.trim()).filter(Boolean);
+        if (lines.length) {
+            authors = lines.map(line => {
+                const firstChunk = line.split(',')[0] || '';
+                const parts = firstChunk.split(' ').filter(Boolean);
+                return { firstName: parts[0] || '', surname: parts.slice(1).join(' ') };
+            });
+        }
+    }
+    if (!authors.length) {
+        quick.textContent = '-';
+        return;
+    }
+    const text = authors.map((a, i) => {
+        const fn = (a.firstName || '').trim();
+        const sn = (a.surname || '').trim();
+        const full = [fn, sn].filter(Boolean).join(' ') || '-';
+        return `${i + 1}) ${full}`;
+    }).join('\n');
+    quick.textContent = text;
+}
+
+async function viewUserCM(userId) {
+    const user = allUsers.find(u => u.id === userId);
+    setText('cmUserName', user ? `${user.name} (ID: ${user.id})` : String(userId));
+    document.getElementById('cmError').style.display = 'none';
+    // 先置灰下载按钮，等拿到数据后再决定是否启用
+    const preDlBtn = document.getElementById('cmDownloadBtn');
+    if (preDlBtn) {
+        preDlBtn.disabled = true;
+        delete preDlBtn.dataset.url;
+        delete preDlBtn.dataset.name;
+        preDlBtn.title = 'No file to download';
+        preDlBtn.setAttribute('aria-disabled', 'true');
+    }
+
+    try {
+        const [feeRes, absRes] = await Promise.all([
+            fetch(`/api/admin/users/${userId}/fee-payment`, { credentials: 'include' }),
+            fetch(`/api/admin/users/${userId}/abstract`, { credentials: 'include' })
+        ]);
+
+        const feeData = await feeRes.json();
+        const absData = await absRes.json();
+
+        // Fee payment
+        const p = feeData && feeData.payment ? feeData.payment : {};
+        setText('cmPaperNumber', p.paper_number);
+        setText('cmName', p.name);
+        setText('cmGender', p.gender);
+        setText('cmEmail', p.email);
+        setText('cmCategory', p.participant_category);
+        setText('cmCountry', p.country);
+        setText('cmIncome', p.income_level);
+        setText('cmState', p.state_province);
+        setText('cmCity', p.city);
+        setText('cmAddress', p.address);
+        setText('cmZip', p.zip_code);
+        setText('cmAffiliation', p.affiliation);
+        setText('cmWorkPhone', p.work_phone);
+        setText('cmMobilePhone', p.mobile_phone);
+        setText('cmRemarks', p.remarks);
+
+        // Abstract submission
+        const s = absData && absData.submission ? absData.submission : {};
+        setText('cmTitle', s.title);
+        renderAuthorsQuickOnly(s.authors);
+        setText('cmAff', s.affiliation);
+        const topicText = (s.topic || s.topic === 0) ? (TOPIC_LABELS[s.topic] || String(s.topic)) : '-';
+        setText('cmTopic', topicText);
+        setText('cmAbstractText', s.abstract);
+        setText('cmKeywords', s.keywords);
+
+        const nameSpan = document.getElementById('cmFileName');
+        const dlBtn = document.getElementById('cmDownloadBtn');
+        if (s && s.file_path) {
+            const fileUrl = `/server/uploads/${s.file_path}`;
+            nameSpan.textContent = s.original_filename || s.file_path;
+            if (dlBtn) {
+                dlBtn.disabled = false;
+                dlBtn.dataset.url = fileUrl;
+                dlBtn.dataset.name = s.original_filename || s.file_path;
+                dlBtn.title = 'Download file';
+                dlBtn.setAttribute('aria-disabled', 'false');
+            }
+        } else {
+            nameSpan.textContent = '-';
+            if (dlBtn) {
+                dlBtn.disabled = true;
+                delete dlBtn.dataset.url;
+                delete dlBtn.dataset.name;
+                dlBtn.title = 'No file to download';
+                dlBtn.setAttribute('aria-disabled', 'true');
+            }
+        }
+
+        document.getElementById('viewCMModal').classList.add('active');
+    } catch (err) {
+        console.error('Load CM error:', err);
+        const errDiv = document.getElementById('cmError');
+        errDiv.textContent = 'Failed to load conference data.';
+        errDiv.style.display = 'block';
+        document.getElementById('viewCMModal').classList.add('active');
+    }
+}
+
+function closeViewCMModal() {
+    document.getElementById('viewCMModal').classList.remove('active');
+}
+
+// 下载摘要文件（如果存在）
+function downloadCMFile() {
+    const btn = document.getElementById('cmDownloadBtn');
+    if (!btn || btn.disabled || !btn.dataset.url) return;
+    const a = document.createElement('a');
+    a.href = btn.dataset.url;
+    a.target = '_blank';
+    a.download = btn.dataset.name || '';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+// 导出 View 弹窗内容为 PDF
+async function exportCMToPDF() {
+    try {
+        const bodyEl = document.getElementById('cmBody');
+        if (!bodyEl) return;
+        const nameText = (document.getElementById('cmUserName')?.textContent || 'User').trim();
+        document.body.classList.add('pdf-export');
+        await new Promise(r => setTimeout(r, 0));
+        const canvas = await html2canvas(bodyEl, { 
+            scale: 2, 
+            useCORS: true, 
+            backgroundColor: '#ffffff',
+            windowWidth: 1200, // force desktop-like layout regardless of device width
+            windowHeight: Math.max(bodyEl.scrollHeight, 1600),
+            scrollX: 0,
+            scrollY: 0,
+            ignoreElements: function(el) {
+                return el && el.classList && el.classList.contains('modal-footer-actions');
+            }
+        });
+        const imgData = canvas.toDataURL('image/png');
+        const jspdfNS = window.jspdf || {};
+        const jsPDFCtor = jspdfNS.jsPDF;
+        if (!jsPDFCtor) {
+            alert('PDF library not loaded');
+            return;
+        }
+        const pdf = new jsPDFCtor('p', 'mm', 'a4');
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = 10;
+        const headerY = 15;
+        const startY = 25;
+        const header = `Conference Management - ${nameText}`;
+
+        pdf.setFontSize(12);
+        pdf.text(header, margin, headerY);
+
+        const imgWidth = pageWidth - margin * 2;
+        const imgHeight = canvas.height * imgWidth / canvas.width;
+        let heightLeft = imgHeight;
+        let position = startY;
+
+        pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+        heightLeft -= (pageHeight - position - margin);
+
+        while (heightLeft > 0) {
+            pdf.addPage();
+            pdf.setFontSize(12);
+            pdf.text(header, margin, headerY);
+            position = startY - (imgHeight - heightLeft);
+            pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+            heightLeft -= (pageHeight - startY - margin);
+        }
+
+        const safeName = nameText.replace(/[^a-zA-Z0-9-_\s]/g, '').replace(/\s+/g, '_');
+        pdf.save(`Conference_${safeName}.pdf`);
+    } catch (e) {
+        console.error('Export PDF error:', e);
+        alert('Export failed.');
+    } finally {
+        document.body.classList.remove('pdf-export');
+    }
+}
+
 // 初始化
 init();
+
+// 绑定分页控件
+setupPaginationControls();
+
+// 允许通过 ESC 和点击遮罩关闭查看弹窗
+(function setupViewCMModalInteractions() {
+    const modal = document.getElementById('viewCMModal');
+    if (!modal) return;
+    // 点击遮罩关闭（仅当点击在遮罩本身，而非内容上）
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal && modal.classList.contains('active')) {
+            closeViewCMModal();
+        }
+    });
+    // ESC 键关闭
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('active')) {
+            closeViewCMModal();
+        }
+    });
+})();

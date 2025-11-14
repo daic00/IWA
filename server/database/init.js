@@ -75,15 +75,66 @@ db.exec(`
         title TEXT NOT NULL,
         authors TEXT NOT NULL,
         affiliation TEXT NOT NULL,
+        topic INTEGER NOT NULL,
         abstract TEXT NOT NULL,
         keywords TEXT NOT NULL,
         file_path TEXT,
+        original_filename TEXT,
         status TEXT DEFAULT 'Pending',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id)
     );
 `);
+
+// 为已存在的表添加 original_filename 字段（如果不存在）
+try {
+    // 先检查列是否存在
+    const tableInfo = db.prepare("PRAGMA table_info(abstract_submissions)").all();
+    const hasOriginalFilename = tableInfo.some(col => col.name === 'original_filename');
+    const hasTheme = tableInfo.some(col => col.name === 'theme');
+    const hasTopic = tableInfo.some(col => col.name === 'topic');
+    
+    if (!hasOriginalFilename) {
+        db.exec(`
+            ALTER TABLE abstract_submissions 
+            ADD COLUMN original_filename TEXT;
+        `);
+        console.log('✅ Added original_filename column to abstract_submissions table');
+    }
+    
+    // 迁移 theme 到 topic（如果存在旧字段）
+    if (hasTheme && !hasTopic) {
+        // 先添加 topic 字段为 INTEGER（先可空，因为可能有旧数据）
+        db.exec(`
+            ALTER TABLE abstract_submissions 
+            ADD COLUMN topic INTEGER;
+        `);
+        // 从 theme 字段提取数字并迁移到 topic
+        // 尝试从 "Session X: ..." 格式提取数字
+        try {
+            db.exec(`
+                UPDATE abstract_submissions 
+                SET topic = CAST(SUBSTR(theme, 9, 1) AS INTEGER)
+                WHERE theme LIKE 'Session %:%' 
+                  AND CAST(SUBSTR(theme, 9, 1) AS INTEGER) BETWEEN 1 AND 7;
+            `);
+        } catch (e) {
+            // 如果提取失败，尝试其他方式
+            console.warn('Could not extract topic from theme:', e.message);
+        }
+        console.log('✅ Migrated theme to topic column in abstract_submissions table');
+    } else if (!hasTopic && !hasTheme) {
+        // 如果既没有 theme 也没有 topic，添加 topic（可空，新记录时通过应用层保证必填）
+        db.exec(`
+            ALTER TABLE abstract_submissions 
+            ADD COLUMN topic INTEGER;
+        `);
+        console.log('✅ Added topic column to abstract_submissions table');
+    }
+} catch (error) {
+    console.warn('Warning: Could not add column:', error.message);
+}
 
 // 创建索引
 db.exec(`

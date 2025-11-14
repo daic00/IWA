@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
         mobileMenuToggle.addEventListener('click', function() {
             navMenu.classList.toggle('active');
             this.classList.toggle('active');
+            document.body.classList.toggle('menu-open', navMenu.classList.contains('active'));
         });
     }
 
@@ -16,7 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
     dropdowns.forEach(dropdown => {
         const dropdownLink = dropdown.querySelector('a');
         dropdownLink.addEventListener('click', function(e) {
-            if (window.innerWidth <= 768) {
+            if (window.innerWidth <= 1024) {
                 e.preventDefault();
                 dropdown.classList.toggle('active');
             }
@@ -28,14 +29,16 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!e.target.closest('.navbar')) {
             navMenu.classList.remove('active');
             mobileMenuToggle.classList.remove('active');
+            document.body.classList.remove('menu-open');
         }
     });
 
     // Handle window resize
     window.addEventListener('resize', function() {
-        if (window.innerWidth > 768) {
+        if (window.innerWidth > 1024) {
             navMenu.classList.remove('active');
             mobileMenuToggle.classList.remove('active');
+            document.body.classList.remove('menu-open');
             dropdowns.forEach(dropdown => {
                 dropdown.classList.remove('active');
             });
@@ -55,6 +58,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Close mobile menu after clicking
                 navMenu.classList.remove('active');
                 mobileMenuToggle.classList.remove('active');
+                document.body.classList.remove('menu-open');
             }
         });
     });

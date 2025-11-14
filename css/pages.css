@@ -17,16 +17,22 @@
 .breadcrumb {
     font-size: 1rem;
     opacity: 0.9;
+    margin-top: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
 }
 
 .breadcrumb a {
     color: var(--white);
-    text-decoration: underline;
+    text-decoration: none;
 }
 
 .breadcrumb a:hover {
     opacity: 0.8;
 }
+
+/* Breadcrumb is inline under the title, so no special positioning for container */
 
 /* Content Section */
 .content-section {
@@ -373,6 +379,11 @@
     background-color: var(--bg-light);
 }
 
+/* Multi-session grid tables (Session 1-7) */
+.session-grid-table {
+    table-layout: fixed;
+}
+
 .time-col {
     font-weight: 600;
     color: var(--primary-color);
@@ -545,10 +556,25 @@
 .warning-box {
     background-color: #fff3e0;
     border-left: 4px solid #ff9800;
+    padding: 1.5rem;
+    margin: 2rem 0;
+    border-radius: 4px;
 }
 
 .warning-box h4 {
     color: #ff9800;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.warning-box p {
+    margin-bottom: 0.75rem;
+}
+
+.warning-box ul {
+    margin-left: 1.5rem;
 }
 
 /* Committee Styles */
@@ -856,6 +882,53 @@
     .schedule-table th,
     .schedule-table td {
         padding: 0.75rem;
+    }
+
+    /* Stack multi-session grid tables vertically on mobile */
+    .session-grid-table,
+    .session-grid-table thead,
+    .session-grid-table tbody,
+    .session-grid-table tr,
+    .session-grid-table th,
+    .session-grid-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .session-grid-table thead {
+        display: none;
+    }
+
+    .session-grid-table tbody tr {
+        border: none;
+    }
+
+    .session-grid-table td {
+        padding: 0.75rem 0.85rem;
+        border-bottom: none;
+        background-color: var(--white);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        margin-bottom: 0.75rem;
+    }
+
+    .session-grid-table td::before {
+        content: attr(data-session);
+        display: inline-block;
+        font-weight: 600;
+        color: #fff;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        padding: 0.15rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        margin-bottom: 0.35rem;
+    }
+
+    /* Make long schedule headings more compact and wrap nicely on mobile */
+    .schedule-day h3 {
+        font-size: 1.25rem;
+        word-break: break-word;
+        overflow-wrap: anywhere;
     }
 
     .speaker-grid {

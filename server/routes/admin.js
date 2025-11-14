@@ -63,23 +63,74 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// ===== Read-only: View a user's Conference Management data =====
+// Get fee payment by user ID (admin only, read-only)
+router.get('/users/:id/fee-payment', requireAdmin, (req, res) => {
+    try {
+        const userId = parseInt(req.params.id, 10);
+        if (Number.isNaN(userId)) {
+            return res.json({ success: false, message: 'Invalid user ID' });
+        }
+
+        const payment = db.prepare('SELECT * FROM fee_payments WHERE user_id = ?').get(userId);
+        return res.json({ success: true, payment: payment || null });
+    } catch (error) {
+        console.error('Admin get fee payment error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to get fee payment' });
+    }
+});
+
+// Get abstract submission by user ID (admin only, read-only)
+router.get('/users/:id/abstract', requireAdmin, (req, res) => {
+    try {
+        const userId = parseInt(req.params.id, 10);
+        if (Number.isNaN(userId)) {
+            return res.json({ success: false, message: 'Invalid user ID' });
+        }
+
+        const submission = db.prepare('SELECT * FROM abstract_submissions WHERE user_id = ?').get(userId);
+        if (submission && submission.topic !== null && submission.topic !== undefined) {
+            submission.topic = Math.floor(Number(submission.topic));
+        }
+        return res.json({ success: true, submission: submission || null });
+    } catch (error) {
+        console.error('Admin get abstract error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to get abstract' });
+    }
+});
+
 // 检查管理员权限
 router.get('/check', requireAdmin, (req, res) => {
     res.json({ success: true });
 });
 
-// 获取所有用户
+// 获取用户（分页）
 router.get('/users', requireAdmin, (req, res) => {
     try {
+        // 解析分页参数
+        const allowedPageSizes = [10, 20, 50, 100];
+        let page = parseInt(req.query.page, 10);
+        let pageSize = parseInt(req.query.pageSize, 10);
+        if (Number.isNaN(page) || page < 1) page = 1;
+        if (Number.isNaN(pageSize) || !allowedPageSizes.includes(pageSize)) pageSize = 10;
+
+        const totalRow = db.prepare('SELECT COUNT(*) AS count FROM users').get();
+        const total = totalRow ? totalRow.count : 0;
+        const offset = (page - 1) * pageSize;
+
         const users = db.prepare(`
             SELECT id, username, name, organization, is_admin, created_at, updated_at 
             FROM users 
-            ORDER BY created_at DESC
-        `).all();
-        
+            ORDER BY datetime(created_at) DESC
+            LIMIT $limit OFFSET $offset
+        `).all({ limit: pageSize, offset: Math.max(0, offset) });
+
         res.json({ 
-            success: true, 
-            users 
+            success: true,
+            users,
+            total,
+            page,
+            pageSize
         });
         
     } catch (error) {

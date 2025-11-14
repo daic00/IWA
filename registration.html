@@ -30,8 +30,8 @@
                     <li class="dropdown">
                         <a href="program.html">Conference Program <i class="fas fa-chevron-down"></i></a>
                         <ul class="dropdown-menu">
-                            <li><a href="program.html#topics">Conference Topics</a></li>
                             <li><a href="program.html#schedule">Session Plans</a></li>
+                            <li><a href="program.html#topics">Conference Topics</a></li>
                             <li><a href="program.html#keynote">Keynote Speakers</a></li>
                         </ul>
                     </li>
@@ -61,7 +61,7 @@
     <section class="page-header">
         <div class="container">
             <h1>Registration</h1>
-            <p class="breadcrumb"><a href="index.html">Home</a> / Registration</p>
+            <p class="breadcrumb"><i class="fas fa-location-dot"></i><a href="index.html">Home</a> / Registration</p>
         </div>
     </section>
 
@@ -200,37 +200,23 @@
                     <p class="footer-date">December 18-20, 2025<br>Shanghai, China</p>
                 </div>
                 <div class="footer-col">
-                    <h4>Quick Links</h4>
+                    <h4>Key Links</h4>
                     <ul class="footer-links">
-                        <li><a href="index.html">Home</a></li>
                         <li><a href="call-for-papers.html">Call for Papers</a></li>
                         <li><a href="program.html">Conference Program</a></li>
                         <li><a href="registration.html">Registration</a></li>
-                    </ul>
-                </div>
-                <div class="footer-col">
-                    <h4>Important Links</h4>
-                    <ul class="footer-links">
-                        <li><a href="committees.html">Committees</a></li>
-                        <li><a href="venue.html">Venue & Travel</a></li>
-                        <li><a href="contact.html">Contact Us</a></li>
                         <li><a href="https://iwa-network.org" target="_blank">IWA Network</a></li>
                     </ul>
                 </div>
                 <div class="footer-col">
                     <h4>Contact Information</h4>
+                    <p><strong>Conference Secretary:</strong> Assoc. Prof. Boran Wu</p>
+                    <p>
+                        <i class="fas fa-phone"></i> +86 021-65983869
+                    </p>
                     <p>
                         <i class="fas fa-envelope"></i> 
-                        <a href="mailto:suws2025@tongji.edu.cn">suws2025@tongji.edu.cn</a>
-                    </p>
-                    <p>
-                        <i class="fas fa-phone"></i> +86 021-65986919
-                    </p>
-                    <p>
-                        <i class="fas fa-map-marker-alt"></i> 
-                        Tongji University<br>
-                        1239 Siping Road<br>
-                        Shanghai 200092, China
+                        <a href="mailto:boranwu@tongji.edu.cn">boranwu@tongji.edu.cn</a>
                     </p>
                 </div>
             </div>
@@ -243,41 +229,61 @@
 
     <script src="js/script.js"></script>
     <script>
-        // 检查用户登录状态并智能跳转
-        document.getElementById('registrationBtn').addEventListener('click', async function() {
-            const btn = this;
-            const btnText = document.getElementById('btnText');
-            const btnLoader = document.getElementById('btnLoader');
-            
-            // 显示加载状态
-            btn.disabled = true;
-            btnLoader.style.display = 'inline-block';
-            btnText.textContent = 'Checking...';
-            
-            try {
-                // 检查用户是否已登录
-                const response = await fetch('/api/auth/me', {
-                    credentials: 'include'
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success && data.user) {
-                        // 已登录，跳转到个人中心
-                        window.location.href = 'profile.html';
-                        return;
-                    }
-                }
-                
-                // 未登录，跳转到登录页
-                window.location.href = 'login.html';
-                
-            } catch (error) {
-                console.error('Check login status failed:', error);
-                // 出错时也跳转到登录页
-                window.location.href = 'login.html';
-            }
+        const registrationBtn = document.getElementById('registrationBtn');
+        const btnText = document.getElementById('btnText');
+        const btnLoader = document.getElementById('btnLoader');
+
+        function resetRegistrationButton() {
+            if (!registrationBtn || !btnText || !btnLoader) return;
+            registrationBtn.disabled = false;
+            btnLoader.style.display = 'none';
+            btnText.textContent = 'Online Registration';
+        }
+
+        // Reset on initial load
+        resetRegistrationButton();
+
+        // Also reset when page is restored from bfcache (browser back)
+        window.addEventListener('pageshow', function () {
+            resetRegistrationButton();
         });
+
+        if (registrationBtn) {
+            registrationBtn.addEventListener('click', async function() {
+                const btn = this;
+
+                btn.disabled = true;
+                btnLoader.style.display = 'inline-block';
+                btnText.textContent = 'Checking...';
+                
+                try {
+                    const response = await fetch('/api/auth/me', {
+                        credentials: 'include'
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success && data.user) {
+
+                            console.log("data.user.is_admin :", data.user.is_admin)
+
+                            if (data.user.is_admin) {
+                                window.location.href = 'admin/users.html';
+                            } else {
+                                window.location.href = 'profile.html';
+                            }
+                            return;
+                        }
+                    }
+                    
+                    window.location.href = 'login.html';
+                    
+                } catch (error) {
+                    console.error('Check login status failed:', error);
+                    window.location.href = 'login.html';
+                }
+            });
+        }
     </script>
 </body>
 </html>
