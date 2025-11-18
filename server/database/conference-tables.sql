@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS fee_payments (
     participant_category TEXT,
     iwa_member_info TEXT,
     country TEXT,
-    income_level TEXT,
+    institution TEXT,
     state_province TEXT,
     city TEXT,
     address TEXT,

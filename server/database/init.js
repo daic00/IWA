@@ -19,7 +19,9 @@ db.exec(`
         username TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
         name TEXT NOT NULL,
+        id_number TEXT,
         organization TEXT NOT NULL,
+        receipt_number TEXT,
         is_admin INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -53,6 +55,7 @@ db.exec(`
         iwa_member_info TEXT,
         country TEXT,
         income_level TEXT,
+        institution TEXT,
         state_province TEXT,
         city TEXT,
         address TEXT,
@@ -61,12 +64,36 @@ db.exec(`
         work_phone TEXT,
         mobile_phone TEXT,
         remarks TEXT,
+        receipt_number TEXT,
         payment_status TEXT DEFAULT 'NotPaid',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id)
     );
 `);
+
+// 为已存在的 fee_payments 表添加 receipt_number / payment_status 字段（如果不存在）
+try {
+    const feeInfo = db.prepare("PRAGMA table_info(fee_payments)").all();
+    const hasReceiptNumber = feeInfo.some(col => col.name === 'receipt_number');
+    const hasPaymentStatus = feeInfo.some(col => col.name === 'payment_status');
+    if (!hasReceiptNumber) {
+        db.exec(`
+            ALTER TABLE fee_payments
+            ADD COLUMN receipt_number TEXT;
+        `);
+        console.log('✅ Added receipt_number column to fee_payments table');
+    }
+    if (!hasPaymentStatus) {
+        db.exec(`
+            ALTER TABLE fee_payments
+            ADD COLUMN payment_status TEXT DEFAULT 'NotPaid';
+        `);
+        console.log('✅ Added payment_status column to fee_payments table');
+    }
+} catch (error) {
+    console.warn('Warning: Could not add columns to fee_payments:', error.message);
+}
 
 db.exec(`
     CREATE TABLE IF NOT EXISTS abstract_submissions (
@@ -145,6 +172,29 @@ db.exec(`
     CREATE INDEX IF NOT EXISTS idx_fee_payments_user_id ON fee_payments(user_id);
     CREATE INDEX IF NOT EXISTS idx_abstract_submissions_user_id ON abstract_submissions(user_id);
 `);
+
+// 为已存在的用户表添加 id_number / receipt_number 字段（如果不存在）
+try {
+    const usersInfo = db.prepare("PRAGMA table_info(users)").all();
+    const hasIdNumber = usersInfo.some(col => col.name === 'id_number');
+    const hasUserReceipt = usersInfo.some(col => col.name === 'receipt_number');
+    if (!hasIdNumber) {
+        db.exec(`
+            ALTER TABLE users
+            ADD COLUMN id_number TEXT;
+        `);
+        console.log('✅ Added id_number column to users table');
+    }
+    if (!hasUserReceipt) {
+        db.exec(`
+            ALTER TABLE users
+            ADD COLUMN receipt_number TEXT;
+        `);
+        console.log('✅ Added receipt_number column to users table');
+    }
+} catch (error) {
+    console.warn('Warning: Could not add extra columns to users table:', error.message);
+}
 
 // 初始化默认管理员账号
 async function initializeAdmin() {

@@ -181,6 +181,23 @@
     color: var(--text-light);
 }
 
+.submission-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--primary-color);
+    font-weight: 500;
+    text-decoration: underline;
+}
+
+.submission-link i {
+    font-size: 0.85rem;
+}
+
+.submission-link:hover {
+    color: var(--secondary-color);
+}
+
 /* Publication List */
 .publication-list {
     display: flex;

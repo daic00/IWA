@@ -80,6 +80,66 @@ router.get('/users/:id/fee-payment', requireAdmin, (req, res) => {
     }
 });
 
+// Set or update fee receipt number for a user (admin only)
+router.post('/users/:id/fee-receipt', requireAdmin, (req, res) => {
+    try {
+        const userId = parseInt(req.params.id, 10);
+        const { receiptNumber, idNumber } = req.body || {};
+
+        if (Number.isNaN(userId)) {
+            return res.json({ success: false, message: 'Invalid user ID' });
+        }
+
+        const trimmedReceipt = (receiptNumber || '').trim();
+        if (!trimmedReceipt) {
+            return res.json({ success: false, message: 'Receipt number is required' });
+        }
+
+        // 规范化 ID Number（允许为空/清空）
+        const rawIdNumber = typeof idNumber === 'string' ? idNumber : '';
+        const trimmedIdNumber = rawIdNumber.trim();
+        const idNumberToSave = trimmedIdNumber || null;
+
+        const user = db.prepare('SELECT username, name FROM users WHERE id = ?').get(userId);
+        if (!user) {
+            return res.json({ success: false, message: 'User not found' });
+        }
+
+        // 如果填写了非空 ID Number，则做唯一性校验（排除当前用户）
+        if (trimmedIdNumber) {
+            const existingIdNumber = db.prepare('SELECT id FROM users WHERE id_number = ? AND id != ?')
+                .get(trimmedIdNumber, userId);
+            if (existingIdNumber) {
+                return res.json({
+                    success: false,
+                    message: 'This ID Number has already been registered'
+                });
+            }
+        }
+
+        // 在 users 表上同时维护回执单号和身份证号
+        db.prepare(`
+            UPDATE users
+            SET receipt_number = ?, id_number = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `).run(trimmedReceipt, idNumberToSave, userId);
+
+        // 记录日志
+        try {
+            const details = `Set fee receipt number for ${user.name} (${user.username}): ${trimmedReceipt}` +
+                (trimmedIdNumber ? `; ID Number: ${trimmedIdNumber}` : '');
+            logAdminAction(req.session.userId, 'set_fee_receipt', userId, user.username, details);
+        } catch (e) {
+            console.error('Log fee receipt action error:', e);
+        }
+
+        return res.json({ success: true, message: 'Receipt number saved successfully', receiptNumber: trimmedReceipt });
+    } catch (error) {
+        console.error('Admin set fee receipt error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to save receipt number' });
+    }
+});
+
 // Get abstract submission by user ID (admin only, read-only)
 router.get('/users/:id/abstract', requireAdmin, (req, res) => {
     try {
@@ -119,8 +179,17 @@ router.get('/users', requireAdmin, (req, res) => {
         const offset = (page - 1) * pageSize;
 
         const users = db.prepare(`
-            SELECT id, username, name, organization, is_admin, created_at, updated_at 
-            FROM users 
+            SELECT 
+                id,
+                username,
+                name,
+                id_number,
+                organization,
+                is_admin,
+                created_at,
+                updated_at,
+                receipt_number
+            FROM users
             ORDER BY datetime(created_at) DESC
             LIMIT $limit OFFSET $offset
         `).all({ limit: pageSize, offset: Math.max(0, offset) });

@@ -120,7 +120,13 @@
                     <div class="guidelines-box">
                         <h4><i class="fas fa-laptop"></i> Online Registration</h4>
                         <p>Register online via the conference website</p>
-                        <p><strong>Registration Website:</strong> <em>(To be announced)</em></p>
+                        <p>
+                            <strong>Registration Website:</strong>
+                            <a href="#" id="registrationWebsiteLink" class="submission-link">
+                                <i class="fas fa-arrow-up-right-from-square"></i>
+                                <span>Go to registration portal</span>
+                            </a>
+                        </p>
                     </div>
 
                     <div class="guidelines-box">
@@ -281,6 +287,32 @@
                 } catch (error) {
                     console.error('Check login status failed:', error);
                     window.location.href = 'login.html';
+                }
+            });
+        }
+
+        const registrationWebsiteLink = document.getElementById('registrationWebsiteLink');
+        if (registrationWebsiteLink) {
+            registrationWebsiteLink.addEventListener('click', async function(event) {
+                event.preventDefault();
+
+                try {
+                    const response = await fetch('/api/auth/me', {
+                        credentials: 'include'
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success && data.user) {
+                            window.location.href = 'profile.html';
+                            return;
+                        }
+                    }
+
+                    window.location.href = 'register.html';
+                } catch (error) {
+                    console.error('Check login status failed:', error);
+                    window.location.href = 'register.html';
                 }
             });
         }

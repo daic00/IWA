@@ -42,7 +42,7 @@ router.post('/fee-payment', requireAuth, async (req, res) => {
     try {
         const {
             paperNumber, name, gender, email, participantCategory,
-            iwaMemberInfo, country, incomeLevel, stateProvince, city,
+            iwaMemberInfo, country, institution, stateProvince, city,
             address, zipCode, affiliation, workPhone, mobilePhone, remarks
         } = req.body;
         
@@ -65,13 +65,13 @@ router.post('/fee-payment', requireAuth, async (req, res) => {
                 UPDATE fee_payments SET
                     paper_number = ?, name = ?, gender = ?, email = ?,
                     participant_category = ?, iwa_member_info = ?, country = ?,
-                    income_level = ?, state_province = ?, city = ?, address = ?,
+                    institution = ?, state_province = ?, city = ?, address = ?,
                     zip_code = ?, affiliation = ?, work_phone = ?, mobile_phone = ?,
                     remarks = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE user_id = ?
             `).run(
                 paperNumber, name, gender, email, participantCategory,
-                iwaMemberInfo, country, incomeLevel, stateProvince, city,
+                iwaMemberInfo, country, institution, stateProvince, city,
                 address, zipCode, affiliation, workPhone, mobilePhone,
                 remarks, userId
             );
@@ -86,12 +86,12 @@ router.post('/fee-payment', requireAuth, async (req, res) => {
             const result = db.prepare(`
                 INSERT INTO fee_payments (
                     user_id, paper_number, name, gender, email, participant_category,
-                    iwa_member_info, country, income_level, state_province, city,
+                    iwa_member_info, country, institution, state_province, city,
                     address, zip_code, affiliation, work_phone, mobile_phone, remarks
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
                 userId, paperNumber, name, gender, email, participantCategory,
-                iwaMemberInfo, country, incomeLevel, stateProvince, city,
+                iwaMemberInfo, country, institution, stateProvince, city,
                 address, zipCode, affiliation, workPhone, mobilePhone, remarks
             );
             

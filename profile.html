@@ -369,21 +369,24 @@
 
                     <div class="form-group">
                         <label>How to become an IWA member?</label>
-                        <input type="text" name="iwaMemberInfo" placeholder="Please visit the website...">
+                        <p>
+                            Please visit the website:
+                            <a href="https://www.iwaconnectplus.org/join-iwa" target="_blank" rel="noopener noreferrer">
+                                https://www.iwaconnectplus.org/join-iwa
+                            </a>
+                        </p>
+                        <input type="hidden" name="iwaMemberInfo">
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Country</label>
-                            <input type="text" name="country">
+                            <label>Institution</label>
+                            <input type="text" name="institution">
                         </div>
                         <div class="form-group">
-                            <label>Income Level</label>
-                            <select name="incomeLevel">
+                            <label>Country/Region</label>
+                            <select name="country" id="countrySelect">
                                 <option value="">Select</option>
-                                <option value="Low income country">Low income country</option>
-                                <option value="Middle income country">Middle income country</option>
-                                <option value="High income country">High income country</option>
                             </select>
                         </div>
                     </div>
@@ -415,15 +418,9 @@
                         <input type="text" name="affiliation">
                     </div>
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Work Phone Number</label>
-                            <input type="tel" name="workPhone">
-                        </div>
-                        <div class="form-group">
-                            <label>Mobile Phone Number</label>
-                            <input type="tel" name="mobilePhone">
-                        </div>
+                    <div class="form-group">
+                        <label>Mobile Phone Number</label>
+                        <input type="tel" name="mobilePhone">
                     </div>
 
                     <div class="form-group">
@@ -432,24 +429,60 @@
                     </div>
 
                     <!-- Bank Transfer Information -->
-                    <div class="bank-info">
-                        <h3><i class="fas fa-university"></i> Registration Fees - Bank Transfer Information</h3>
-                        <div class="info-grid">
-                            <div class="info-item">
-                                <strong>Beneficiary:</strong>
-                                <p>Shanghai Good Culture Media Co., Ltd.</p>
+                    <div class="bank-section">
+                        <h3 class="bank-section-title">
+                            <i class="fas fa-university"></i>
+                            Registration Fees - Bank Transfer Information
+                        </h3>
+
+                        <!-- Bank Transfer Information - Mainland China -->
+                        <div class="bank-info">
+                            <h4>中国大陆对公账号支付</h4>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <strong>名称（发票抬头）：</strong>
+                                    <p>上海咕嗒文化传媒有限公司</p>
+                                </div>
+                                <div class="info-item">
+                                    <strong>开户行：</strong>
+                                    <p>上海农商银行中山支行</p>
+                                </div>
+                                <div class="info-item">
+                                    <strong>账号：</strong>
+                                    <p>50131000554304288</p>
+                                </div>
+                                <div class="info-item">
+                                    <strong>12位联行号：</strong>
+                                    <p>322290007086</p>
+                                </div>
                             </div>
-                            <div class="info-item">
-                                <strong>Account with Institution:</strong>
-                                <p>SHANGHAI RURAL COMMERCIAL BANK</p>
-                            </div>
-                            <div class="info-item">
-                                <strong>SWIFT CODE:</strong>
-                                <p>SHRCCNSH</p>
-                            </div>
-                            <div class="info-item">
-                                <strong>Account No.:</strong>
-                                <p>50131000554304288</p>
+                        </div>
+
+                        <!-- Bank Transfer Information - International -->
+                        <div class="bank-info">
+                            <h4>International Account Payments</h4>
+                            <p class="bank-note">For international account payments outside of Mainland China, please use the English name and account number for payment.</p>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <strong>Beneficiary name:</strong>
+                                    <p>Shanghai Good Culture Media Co., Ltd.</p>
+                                </div>
+                                <div class="info-item">
+                                    <strong>Account with institution:</strong>
+                                    <p>SHANGHAI RURAL COMMERCIAL BANK</p>
+                                </div>
+                                <div class="info-item">
+                                    <strong>SWIFT CODE:</strong>
+                                    <p>SHRCCNSH</p>
+                                </div>
+                                <div class="info-item">
+                                    <strong>Beneficiary customer:</strong>
+                                    <p>Shanghai Good Culture Media Co., Ltd.</p>
+                                </div>
+                                <div class="info-item">
+                                    <strong>Account No.:</strong>
+                                    <p>50131000554304288</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -561,6 +594,7 @@
     <script>
         // ===== Choices.js 初始化 =====
         let topicChoices;
+        let countryList = [];
         function initChoices() {
             const topicSelect = document.getElementById('topicSelect');
             if (topicSelect && !topicChoices) {
@@ -633,6 +667,7 @@
                     const firstLetter = data.user.name.charAt(0).toUpperCase();
                     document.getElementById('userAvatar').textContent = firstLetter;
                     
+                    await loadCountries();
                     loadFeePayment();
                     loadAbstract();
                     return Promise.resolve();
@@ -644,6 +679,24 @@
                 console.error('Auth check failed:', error);
                 window.location.href = 'login.html';
                 return Promise.reject(error);
+            }
+        }
+
+        // 加载国家列表
+        async function loadCountries() {
+            try {
+                const response = await fetch('data/countries-simplified.json');
+                const data = await response.json();
+                countryList = data;
+                const countrySelect = document.getElementById('countrySelect');
+                data.forEach(country => {
+                    const option = document.createElement('option');
+                    option.value = country.code;
+                    option.textContent = country.name;
+                    countrySelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Load countries failed:', error);
             }
         }
 
@@ -665,14 +718,26 @@
                     form.email.value = payment.email || '';
                     form.participantCategory.value = payment.participant_category || '';
                     form.iwaMemberInfo.value = payment.iwa_member_info || '';
-                    form.country.value = payment.country || '';
-                    form.incomeLevel.value = payment.income_level || '';
+                    form.institution.value = payment.institution || '';
+                    const rawCountry = payment.country || '';
+                    if (rawCountry && Array.isArray(countryList) && countryList.length > 0) {
+                        const byCode = countryList.find(c => c.code === rawCountry);
+                        const byName = countryList.find(c => c.name === rawCountry);
+                        if (byCode) {
+                            form.country.value = byCode.code;
+                        } else if (byName) {
+                            form.country.value = byName.code;
+                        } else {
+                            form.country.value = '';
+                        }
+                    } else {
+                        form.country.value = rawCountry;
+                    }
                     form.stateProvince.value = payment.state_province || '';
                     form.city.value = payment.city || '';
                     form.address.value = payment.address || '';
                     form.zipCode.value = payment.zip_code || '';
                     form.affiliation.value = payment.affiliation || '';
-                    form.workPhone.value = payment.work_phone || '';
                     form.mobilePhone.value = payment.mobile_phone || '';
                     form.remarks.value = payment.remarks || '';
                 }

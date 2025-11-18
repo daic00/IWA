@@ -7,13 +7,14 @@ const { requireAuth, validateUsername, validatePassword } = require('../middlewa
 // 用户注册
 router.post('/register', async (req, res) => {
     try {
-        const { username, password, name, organization } = req.body;
+        const { username, password, name, idNumber, organization } = req.body;
         
-        // 验证输入
-        if (!username || !password || !name || !organization) {
+        // 验证输入（ID Number 也必填）
+        const idNumberTrimmed = (idNumber || '').trim();
+        if (!username || !password || !name || !organization || !idNumberTrimmed) {
             return res.json({ 
                 success: false, 
-                message: 'Please fill in all required fields' 
+                message: 'Please fill in all required fields (including ID Number)' 
             });
         }
         
@@ -41,17 +42,26 @@ router.post('/register', async (req, res) => {
                 message: 'This username is already taken' 
             });
         }
+
+        // ID Number 唯一性校验
+        const existingIdNumber = db.prepare('SELECT id FROM users WHERE id_number = ?').get(idNumberTrimmed);
+        if (existingIdNumber) {
+            return res.json({
+                success: false,
+                message: 'This ID Number has already been registered'
+            });
+        }
         
         // 加密密码
         const passwordHash = await bcrypt.hash(password, 10);
         
-        // 插入用户
+        // 插入用户（id_number 必填）
         const stmt = db.prepare(`
-            INSERT INTO users (username, password_hash, name, organization, is_admin)
-            VALUES (?, ?, ?, ?, 0)
+            INSERT INTO users (username, password_hash, name, id_number, organization, is_admin)
+            VALUES (?, ?, ?, ?, ?, 0)
         `);
         
-        const result = stmt.run(username, passwordHash, name, organization);
+        const result = stmt.run(username, passwordHash, name, idNumberTrimmed, organization);
         
         // 自动登录
         req.session.userId = result.lastInsertRowid;
@@ -64,6 +74,7 @@ router.post('/register', async (req, res) => {
                 id: result.lastInsertRowid,
                 username,
                 name,
+                id_number: idNumberTrimmed,
                 organization
             }
         });
@@ -137,7 +148,7 @@ router.post('/login', async (req, res) => {
 // 获取当前用户信息
 router.get('/me', requireAuth, (req, res) => {
     try {
-        const user = db.prepare('SELECT id, username, name, organization, is_admin, created_at FROM users WHERE id = ?')
+        const user = db.prepare('SELECT id, username, name, id_number, organization, is_admin, created_at FROM users WHERE id = ?')
             .get(req.session.userId);
         
         if (!user) {
@@ -153,6 +164,7 @@ router.get('/me', requireAuth, (req, res) => {
                 id: user.id,
                 username: user.username,
                 name: user.name,
+                id_number: user.id_number,
                 organization: user.organization,
                 is_admin: user.is_admin,
                 created_at: user.created_at

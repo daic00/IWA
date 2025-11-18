@@ -1,11 +1,27 @@
 // 全局变量
 let allUsers = [];
 let currentEditUserId = null;
+let adminCountryList = null;
 // 分页相关
 let currentPage = 1;
 let pageSize = 10; // 初始 10
 let totalUsersCount = 0;
 let totalPages = 1;
+
+async function loadAdminCountries() {
+    if (adminCountryList) return adminCountryList;
+    try {
+        const res = await fetch('../data/countries-simplified.json');
+        if (!res.ok) throw new Error('Failed to load countries');
+        const data = await res.json();
+        adminCountryList = data;
+        return adminCountryList;
+    } catch (e) {
+        console.warn('Failed to load countries list in admin view:', e);
+        adminCountryList = [];
+        return adminCountryList;
+    }
+}
 
 // 页面加载时检查管理员权限并加载数据
 async function init() {
@@ -36,7 +52,7 @@ async function loadUsers() {
         // 显示加载中
         const tbody = document.getElementById('usersTableBody');
         if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #999;">Loading...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: #999;">Loading...</td></tr>';
         }
 
         const response = await fetch(`/api/admin/users?page=${currentPage}&pageSize=${pageSize}`, {
@@ -68,39 +84,138 @@ function displayUsers(users) {
     const tbody = document.getElementById('usersTableBody');
     
     if (users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #999;">No users found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: #999;">No users found</td></tr>';
         return;
     }
-    
-    tbody.innerHTML = users.map(user => `
+
+    tbody.innerHTML = users.map(user => {
+        const isAdmin = Number(user.is_admin) === 1;
+
+        const hasReceipt = !!(user.receipt_number && String(user.receipt_number).trim());
+        const feeStatusText = hasReceipt ? 'Paid' : 'Not Paid';
+
+        const viewButtonFull = isAdmin ? '' : `
+            <button class="btn btn-secondary btn-sm" onclick="viewUserCM(${user.id})">
+                <i class="fas fa-eye"></i> View
+            </button>`;
+
+        const receiptButtonFull = isAdmin ? '' : `
+            <button class="btn btn-success btn-sm" onclick="openFeeReceiptModal(${user.id})">
+                <i class="fas fa-receipt"></i> Receipt
+            </button>`;
+
+        const editButtonFull = `
+            <button class="btn btn-primary btn-sm" onclick="openEditUserModal(${user.id})">
+                <i class="fas fa-edit"></i> Edit
+            </button>`;
+
+        const resetButtonFull = `
+            <button class="btn btn-secondary btn-sm" onclick="openResetPasswordModal(${user.id}, '${escapeHtml(user.name)}')">
+                <i class="fas fa-key"></i> Reset
+            </button>`;
+
+        const deleteButtonFull = `
+            <button class="btn btn-danger btn-sm" onclick="deleteUser(${user.id}, '${escapeHtml(user.name)}')">
+                <i class="fas fa-trash"></i> Delete
+            </button>`;
+
+        const viewItemCompact = isAdmin ? '' : `
+            <button type="button" onclick="viewUserCM(${user.id})">
+                <i class="fas fa-eye"></i><span>View</span>
+            </button>`;
+
+        const receiptItemCompact = isAdmin ? '' : `
+            <button type="button" onclick="openFeeReceiptModal(${user.id})">
+                <i class="fas fa-receipt"></i><span>Receipt</span>
+            </button>`;
+
+        return `
         <tr>
             <td data-label="ID">${user.id}</td>
             <td data-label="Name">${escapeHtml(user.name)}</td>
             <td data-label="Username">${escapeHtml(user.username)}</td>
             <td data-label="Organization">${escapeHtml(user.organization)}</td>
             <td data-label="Role">
-                <span class="user-badge ${(Number(user.is_admin) === 1) ? 'badge-admin' : 'badge-user'}">
-                    ${(Number(user.is_admin) === 1) ? '<i class="fas fa-shield-alt"></i> Admin' : '<i class="fas fa-user"></i> User'}
+                <span class="user-badge ${isAdmin ? 'badge-admin' : 'badge-user'}">
+                    ${isAdmin ? '<i class="fas fa-shield-alt"></i> Admin' : '<i class="fas fa-user"></i> User'}
                 </span>
             </td>
             <td data-label="Registered">${formatDate(user.created_at)}</td>
+            <td data-label="Fee Status">
+                <span class="fee-status ${hasReceipt ? 'paid' : 'unpaid'}">
+                    ${feeStatusText}
+                </span>
+            </td>
             <td data-label="Actions">
                 <div class="actions">
-                    ${(Number(user.is_admin) === 1) ? '' : '<button class="btn btn-secondary btn-sm" onclick="viewUserCM(' + user.id + ')"><i class="fas fa-eye"></i> View</button>'}
-                    <button class="btn btn-primary btn-sm" onclick="openEditUserModal(${user.id})">
-                        <i class="fas fa-edit"></i> Edit
-                    </button>
-                    <button class="btn btn-secondary btn-sm" onclick="openResetPasswordModal(${user.id}, '${escapeHtml(user.name)}')">
-                        <i class="fas fa-key"></i> Reset
-                    </button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteUser(${user.id}, '${escapeHtml(user.name)}')">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
+                    <div class="actions-full">
+                        ${viewButtonFull}
+                        ${receiptButtonFull}
+                        ${editButtonFull}
+                        ${resetButtonFull}
+                        ${deleteButtonFull}
+                    </div>
+                    <div class="actions-compact">
+                        <button type="button" class="btn btn-secondary btn-sm actions-toggle" onclick="toggleActionsDropdown(this)">
+                            <i class="fas fa-ellipsis-h"></i>
+                        </button>
+                        <div class="actions-dropdown">
+                            ${viewItemCompact}
+                            ${receiptItemCompact}
+                            <button type="button" onclick="openEditUserModal(${user.id})">
+                                <i class="fas fa-edit"></i><span>Edit</span>
+                            </button>
+                            <button type="button" onclick="openResetPasswordModal(${user.id}, '${escapeHtml(user.name)}')">
+                                <i class="fas fa-key"></i><span>Reset</span>
+                            </button>
+                            <button type="button" class="danger" onclick="deleteUser(${user.id}, '${escapeHtml(user.name)}')">
+                                <i class="fas fa-trash"></i><span>Delete</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
 }
+
+// 切换 Actions 三点菜单
+function toggleActionsDropdown(button) {
+    const currentRow = button.closest('.actions-compact');
+    const currentDropdown = currentRow ? currentRow.querySelector('.actions-dropdown') : null;
+    const isOpen = currentDropdown && currentDropdown.classList.contains('open');
+
+    // 先关闭所有菜单
+    document.querySelectorAll('.actions-dropdown.open').forEach(el => {
+        el.classList.remove('open');
+    });
+
+    // 再根据当前状态决定是否打开
+    if (!isOpen && currentDropdown) {
+        currentDropdown.classList.add('open');
+    }
+}
+
+// 全局：点击其他区域或按 Esc 关闭所有三点菜单
+document.addEventListener('click', (event) => {
+    const target = event.target;
+    // 点击在 actions-compact 区域内时交给各自按钮处理
+    if (target.closest('.actions-compact')) {
+        return;
+    }
+    document.querySelectorAll('.actions-dropdown.open').forEach(el => {
+        el.classList.remove('open');
+    });
+});
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+        document.querySelectorAll('.actions-dropdown.open').forEach(el => {
+            el.classList.remove('open');
+        });
+    }
+});
 
 // 更新统计数据
 // 从后端统计接口更新仪表数据
@@ -299,28 +414,30 @@ document.getElementById('userForm').addEventListener('submit', async function(e)
 
 // 删除用户
 async function deleteUser(userId, userName) {
-    if (!confirm(`Are you sure you want to delete user "${userName}"?\n\nThis action cannot be undone.`)) {
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/api/admin/users/${userId}`, {
-            method: 'DELETE',
-            credentials: 'include'
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            showSuccess('User deleted successfully');
-            await loadUsers();
-        } else {
-            showError(data.message || 'Delete failed');
+    showConfirmDialog(
+        'Confirm Delete',
+        `Are you sure you want to delete user "${userName}"?\n\nThis action cannot be undone.`,
+        async () => {
+            try {
+                const response = await fetch(`/api/admin/users/${userId}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess('User deleted successfully');
+                    await loadUsers();
+                } else {
+                    showError(data.message || 'Delete failed');
+                }
+            } catch (error) {
+                console.error('Delete user error:', error);
+                showError('Network error. Please try again.');
+            }
         }
-    } catch (error) {
-        console.error('Delete user error:', error);
-        showError('Network error. Please try again.');
-    }
+    );
 }
 
 // 打开重置密码模态框
@@ -377,6 +494,97 @@ document.getElementById('resetPasswordForm').addEventListener('submit', async fu
         showResetModalError('Network error. Please try again.');
     }
 });
+
+// 打开会费回执单号模态框
+function openFeeReceiptModal(userId) {
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) return;
+
+    const userIdInput = document.getElementById('feeReceiptUserId');
+    const userNameSpan = document.getElementById('feeReceiptUserName');
+    const userIdNumberInput = document.getElementById('feeReceiptIdNumber');
+    const numberInput = document.getElementById('feeReceiptNumber');
+    const errorDiv = document.getElementById('feeReceiptModalError');
+
+    if (userIdInput) userIdInput.value = user.id;
+    if (userNameSpan) userNameSpan.textContent = `${user.name} (${user.username})`;
+    if (userIdNumberInput) userIdNumberInput.value = user.id_number || '';
+    if (numberInput) numberInput.value = user.receipt_number || '';
+    if (errorDiv) {
+        errorDiv.style.display = 'none';
+        errorDiv.textContent = '';
+    }
+
+    const modal = document.getElementById('feeReceiptModal');
+    if (modal) {
+        modal.classList.add('active');
+    }
+}
+
+function closeFeeReceiptModal() {
+    const modal = document.getElementById('feeReceiptModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+    const form = document.getElementById('feeReceiptForm');
+    if (form) {
+        form.reset();
+    }
+    const errorDiv = document.getElementById('feeReceiptModalError');
+    if (errorDiv) {
+        errorDiv.style.display = 'none';
+        errorDiv.textContent = '';
+    }
+}
+
+// 提交会费回执单号表单
+const feeReceiptForm = document.getElementById('feeReceiptForm');
+if (feeReceiptForm) {
+    feeReceiptForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const userIdInput = document.getElementById('feeReceiptUserId');
+        const userIdNumberInput = document.getElementById('feeReceiptIdNumber');
+        const numberInput = document.getElementById('feeReceiptNumber');
+        const errorDiv = document.getElementById('feeReceiptModalError');
+
+        const userId = userIdInput ? userIdInput.value : '';
+        const idNumber = userIdNumberInput ? userIdNumberInput.value.trim() : '';
+        const receiptNumber = numberInput ? numberInput.value.trim() : '';
+
+        if (!receiptNumber) {
+            if (errorDiv) {
+                errorDiv.textContent = 'Receipt number is required';
+                errorDiv.style.display = 'block';
+            }
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/admin/users/${userId}/fee-receipt`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ receiptNumber, idNumber })
+            });
+            const data = await response.json();
+            if (data.success) {
+                closeFeeReceiptModal();
+                showSuccess('Receipt number saved successfully');
+                await loadUsers();
+            } else if (errorDiv) {
+                errorDiv.textContent = data.message || 'Failed to save receipt number';
+                errorDiv.style.display = 'block';
+            }
+        } catch (err) {
+            console.error('Save fee receipt error:', err);
+            if (errorDiv) {
+                errorDiv.textContent = 'Network error. Please try again.';
+                errorDiv.style.display = 'block';
+            }
+        }
+    });
+}
 
 // 登出
 function logout() {
@@ -518,66 +726,85 @@ async function viewUserCM(userId) {
     }
 
     try {
-        const [feeRes, absRes] = await Promise.all([
-            fetch(`/api/admin/users/${userId}/fee-payment`, { credentials: 'include' }),
-            fetch(`/api/admin/users/${userId}/abstract`, { credentials: 'include' })
-        ]);
+        try {
+            const [feeRes, absRes, countries] = await Promise.all([
+                fetch(`/api/admin/users/${userId}/fee-payment`, { credentials: 'include' }),
+                fetch(`/api/admin/users/${userId}/abstract`, { credentials: 'include' }),
+                loadAdminCountries()
+            ]);
 
-        const feeData = await feeRes.json();
-        const absData = await absRes.json();
+            const feeData = await feeRes.json();
+            const absData = await absRes.json();
 
-        // Fee payment
-        const p = feeData && feeData.payment ? feeData.payment : {};
-        setText('cmPaperNumber', p.paper_number);
-        setText('cmName', p.name);
-        setText('cmGender', p.gender);
-        setText('cmEmail', p.email);
-        setText('cmCategory', p.participant_category);
-        setText('cmCountry', p.country);
-        setText('cmIncome', p.income_level);
-        setText('cmState', p.state_province);
-        setText('cmCity', p.city);
-        setText('cmAddress', p.address);
-        setText('cmZip', p.zip_code);
-        setText('cmAffiliation', p.affiliation);
-        setText('cmWorkPhone', p.work_phone);
-        setText('cmMobilePhone', p.mobile_phone);
-        setText('cmRemarks', p.remarks);
-
-        // Abstract submission
-        const s = absData && absData.submission ? absData.submission : {};
-        setText('cmTitle', s.title);
-        renderAuthorsQuickOnly(s.authors);
-        setText('cmAff', s.affiliation);
-        const topicText = (s.topic || s.topic === 0) ? (TOPIC_LABELS[s.topic] || String(s.topic)) : '-';
-        setText('cmTopic', topicText);
-        setText('cmAbstractText', s.abstract);
-        setText('cmKeywords', s.keywords);
-
-        const nameSpan = document.getElementById('cmFileName');
-        const dlBtn = document.getElementById('cmDownloadBtn');
-        if (s && s.file_path) {
-            const fileUrl = `/server/uploads/${s.file_path}`;
-            nameSpan.textContent = s.original_filename || s.file_path;
-            if (dlBtn) {
-                dlBtn.disabled = false;
-                dlBtn.dataset.url = fileUrl;
-                dlBtn.dataset.name = s.original_filename || s.file_path;
-                dlBtn.title = 'Download file';
-                dlBtn.setAttribute('aria-disabled', 'false');
+            // Fee payment（除了回执单号，其余字段都从 fee_payments 里读）
+            const p = feeData && feeData.payment ? feeData.payment : {};
+            setText('cmPaperNumber', p.paper_number);
+            setText('cmReceiptNumber', user ? user.receipt_number : undefined);
+            setText('cmName', p.name);
+            setText('cmGender', p.gender);
+            setText('cmEmail', p.email);
+            setText('cmCategory', p.participant_category);
+            let countryDisplay = p.country;
+            if (countryDisplay && Array.isArray(countries) && countries.length > 0) {
+                const byCode = countries.find(c => c.code === countryDisplay);
+                const byName = countries.find(c => c.name === countryDisplay);
+                if (byCode) {
+                    countryDisplay = byCode.name;
+                } else if (byName) {
+                    countryDisplay = byName.name;
+                }
             }
-        } else {
-            nameSpan.textContent = '-';
-            if (dlBtn) {
-                dlBtn.disabled = true;
-                delete dlBtn.dataset.url;
-                delete dlBtn.dataset.name;
-                dlBtn.title = 'No file to download';
-                dlBtn.setAttribute('aria-disabled', 'true');
+            setText('cmCountry', countryDisplay);
+            setText('cmInstitution', p.institution);
+            setText('cmState', p.state_province);
+            setText('cmCity', p.city);
+            setText('cmAddress', p.address);
+            setText('cmZip', p.zip_code);
+            setText('cmAffiliation', p.affiliation);
+            setText('cmMobilePhone', p.mobile_phone);
+            setText('cmRemarks', p.remarks);
+
+            // Abstract submission
+            const s = absData && absData.submission ? absData.submission : {};
+            setText('cmTitle', s.title);
+            renderAuthorsQuickOnly(s.authors);
+            setText('cmAff', s.affiliation);
+            const topicText = (s.topic || s.topic === 0) ? (TOPIC_LABELS[s.topic] || String(s.topic)) : '-';
+            setText('cmTopic', topicText);
+            setText('cmAbstractText', s.abstract);
+            setText('cmKeywords', s.keywords);
+
+            const nameSpan = document.getElementById('cmFileName');
+            const dlBtn = document.getElementById('cmDownloadBtn');
+            if (s && s.file_path) {
+                const fileUrl = `/server/uploads/${s.file_path}`;
+                nameSpan.textContent = s.original_filename || s.file_path;
+                if (dlBtn) {
+                    dlBtn.disabled = false;
+                    dlBtn.dataset.url = fileUrl;
+                    dlBtn.dataset.name = s.original_filename || s.file_path;
+                    dlBtn.title = 'Download file';
+                    dlBtn.setAttribute('aria-disabled', 'false');
+                }
+            } else {
+                nameSpan.textContent = '-';
+                if (dlBtn) {
+                    dlBtn.disabled = true;
+                    delete dlBtn.dataset.url;
+                    delete dlBtn.dataset.name;
+                    dlBtn.title = 'No file to download';
+                    dlBtn.setAttribute('aria-disabled', 'true');
+                }
             }
+
+            document.getElementById('viewCMModal').classList.add('active');
+        } catch (err) {
+            console.error('Load CM error:', err);
+            const errDiv = document.getElementById('cmError');
+            errDiv.textContent = 'Failed to load conference data.';
+            errDiv.style.display = 'block';
+            document.getElementById('viewCMModal').classList.add('active');
         }
-
-        document.getElementById('viewCMModal').classList.add('active');
     } catch (err) {
         console.error('Load CM error:', err);
         const errDiv = document.getElementById('cmError');

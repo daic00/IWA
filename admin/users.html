@@ -458,13 +458,23 @@
                 color: #555;
             }
             .users-table td[data-label="Actions"] {
-                display: block;
                 padding-top: 0.75rem;
             }
-            .users-table td[data-label="Actions"] .actions {
-                display: flex;
-                gap: 0.5rem;
-                flex-wrap: wrap;
+            .users-table td[data-label="Actions"] .actions-full {
+                display: none;
+            }
+            .users-table td[data-label="Actions"] .actions-compact {
+                display: inline-flex;
+            }
+        }
+
+        /* Tablet and small desktop: use three-dot menu */
+        @media (min-width: 701px) and (max-width: 1024px) {
+            .users-table td[data-label="Actions"] .actions-full {
+                display: none;
+            }
+            .users-table td[data-label="Actions"] .actions-compact {
+                display: inline-flex;
             }
         }
 
@@ -486,9 +496,90 @@
             color: #495057;
         }
 
+        .fee-status {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 500;
+        }
+
+        .fee-status.paid {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .fee-status.unpaid {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
         .actions {
             display: flex;
             gap: 0.5rem;
+        }
+
+        .actions-full {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .actions-compact {
+            display: none;
+            position: relative;
+        }
+
+        .actions-compact .actions-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            padding: 0.375rem;
+        }
+
+        .actions-dropdown {
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 0.25rem;
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            min-width: 160px;
+            z-index: 10;
+            display: none;
+        }
+
+        .actions-dropdown.open {
+            display: block;
+        }
+
+        .actions-dropdown button {
+            width: 100%;
+            border: none;
+            background: none;
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+            font-size: 0.85rem;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .actions-dropdown button:hover {
+            background: #f8f9fa;
+        }
+
+        .actions-dropdown button.danger {
+            color: #dc3545;
+        }
+
+        .actions-dropdown i {
+            width: 14px;
+            text-align: center;
         }
 
         .modal {
@@ -694,6 +785,15 @@
         .details-item ol.authors-list li {
             margin: 0.125rem 0;
         }
+
+        @media (max-width: 768px) {
+            .details-grid {
+                grid-template-columns: 1fr;
+            }
+            .details-grid .details-item {
+                grid-column: 1 / -1 !important;
+            }
+        }
         /* Authors table in admin read-only modal */
         .cm-authors-table {
             width: 100%;
@@ -791,9 +891,26 @@
             .users-table td {
                 padding: 0.75rem 0.5rem;
             }
+        }
 
-            .actions {
-                flex-direction: column;
+        /* Actions: desktop vs medium/small screens
+           - 现在所有屏幕尺寸统一使用三点更多菜单（actions-compact）
+         */
+        @media (min-width: 1025px) {
+            .actions-full {
+                display: none;
+            }
+            .actions-compact {
+                display: inline-flex;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .actions-full {
+                display: none;
+            }
+            .actions-compact {
+                display: inline-flex;
             }
         }
         /* Final override for very small screens: 3 stats per row */
@@ -859,18 +976,18 @@
                 <h4 class="section-title"><i class="fas fa-credit-card"></i> Fee Payments</h4>
                 <div id="cmFee" class="details-grid" style="margin-bottom: 1rem;">
                     <div class="details-item"><strong>Paper Number</strong><span id="cmPaperNumber">-</span></div>
+                    <div class="details-item"><strong>Receipt Number</strong><span id="cmReceiptNumber">-</span></div>
                     <div class="details-item"><strong>Name</strong><span id="cmName">-</span></div>
                     <div class="details-item"><strong>Gender</strong><span id="cmGender">-</span></div>
                     <div class="details-item"><strong>Email</strong><span id="cmEmail">-</span></div>
                     <div class="details-item"><strong>Category</strong><span id="cmCategory">-</span></div>
-                    <div class="details-item"><strong>Country</strong><span id="cmCountry">-</span></div>
-                    <div class="details-item"><strong>Income Level</strong><span id="cmIncome">-</span></div>
+                    <div class="details-item"><strong>Institution</strong><span id="cmInstitution">-</span></div>
+                    <div class="details-item"><strong>Country/Region</strong><span id="cmCountry">-</span></div>
                     <div class="details-item"><strong>State/Province</strong><span id="cmState">-</span></div>
                     <div class="details-item"><strong>City</strong><span id="cmCity">-</span></div>
-                    <div class="details-item"><strong>Address</strong><span id="cmAddress">-</span></div>
+                    <div class="details-item" style="grid-column: span 3;"><strong>Address</strong><span id="cmAddress">-</span></div>
                     <div class="details-item"><strong>Zip Code</strong><span id="cmZip">-</span></div>
                     <div class="details-item"><strong>Affiliation</strong><span id="cmAffiliation">-</span></div>
-                    <div class="details-item"><strong>Work Phone</strong><span id="cmWorkPhone">-</span></div>
                     <div class="details-item"><strong>Mobile Phone</strong><span id="cmMobilePhone">-</span></div>
                     <div class="details-item" style="grid-column: 1 / -1;"><strong>Remarks</strong><span id="cmRemarks">-</span></div>
                 </div>
@@ -883,10 +1000,10 @@
                         <div class="authors-quick" id="cmAuthorsQuick">-</div>
                     </div>
                     <div class="details-item"><strong>Affiliation</strong><span id="cmAff">-</span></div>
-                    <div class="details-item"><strong>Topic</strong><span id="cmTopic">-</span></div>
+                    <div class="details-item" style="grid-column: span 2;"><strong>Topic</strong><span id="cmTopic">-</span></div>
                     <div class="details-item" style="grid-column: 1 / -1;"><strong>Abstract</strong><span id="cmAbstractText">-</span></div>
                     <div class="details-item"><strong>Keywords</strong><span id="cmKeywords">-</span></div>
-                    <div class="details-item"><strong>File</strong>
+                    <div class="details-item" style="grid-column: span 2;"><strong>File</strong>
                         <span id="cmFile"><span id="cmFileName">-</span></span>
                     </div>
                 </div>
@@ -943,12 +1060,13 @@
                         <th>Organization</th>
                         <th>Role</th>
                         <th>Registered</th>
+                        <th>Fee Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="usersTableBody">
                     <tr>
-                        <td colspan="7" style="text-align: center; padding: 2rem;">Loading...</td>
+                        <td colspan="8" style="text-align: center; padding: 2rem;">Loading...</td>
                     </tr>
                 </tbody>
             </table>
@@ -1056,6 +1174,38 @@
         </div>
     </div>
 
+    <!-- Fee Receipt Modal -->
+    <div class="modal" id="feeReceiptModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Fee Payment Receipt</h3>
+                <button class="close-btn" onclick="closeFeeReceiptModal()">&times;</button>
+            </div>
+            <div class="error-message" id="feeReceiptModalError"></div>
+            <form id="feeReceiptForm">
+                <input type="hidden" id="feeReceiptUserId">
+                <p style="margin-bottom: 1rem; color: #666;">
+                    Set receipt number for: <strong id="feeReceiptUserName"></strong>
+                </p>
+                <div class="form-group">
+                    <label for="feeReceiptIdNumber">ID Number</label>
+                    <input type="text" id="feeReceiptIdNumber">
+                </div>
+                <div class="form-group">
+                    <label for="feeReceiptNumber">Receipt Number <span class="required">*</span></label>
+                    <input type="text" id="feeReceiptNumber" required>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeFeeReceiptModal()" style="flex: 1;">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script src="../js/modal.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
