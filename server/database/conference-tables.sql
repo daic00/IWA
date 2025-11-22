@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS abstract_submissions (
     authors TEXT NOT NULL,
     affiliation TEXT NOT NULL,
     topic INTEGER NOT NULL,
+    presentation_type TEXT,
     abstract TEXT NOT NULL,
     keywords TEXT NOT NULL,
     file_path TEXT,

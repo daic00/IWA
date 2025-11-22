@@ -103,6 +103,7 @@ db.exec(`
         authors TEXT NOT NULL,
         affiliation TEXT NOT NULL,
         topic INTEGER NOT NULL,
+        presentation_type TEXT,
         abstract TEXT NOT NULL,
         keywords TEXT NOT NULL,
         file_path TEXT,
@@ -121,6 +122,7 @@ try {
     const hasOriginalFilename = tableInfo.some(col => col.name === 'original_filename');
     const hasTheme = tableInfo.some(col => col.name === 'theme');
     const hasTopic = tableInfo.some(col => col.name === 'topic');
+    const hasPresentationType = tableInfo.some(col => col.name === 'presentation_type');
     
     if (!hasOriginalFilename) {
         db.exec(`
@@ -158,6 +160,14 @@ try {
             ADD COLUMN topic INTEGER;
         `);
         console.log('✅ Added topic column to abstract_submissions table');
+    }
+    
+    if (!hasPresentationType) {
+        db.exec(`
+            ALTER TABLE abstract_submissions 
+            ADD COLUMN presentation_type TEXT;
+        `);
+        console.log('✅ Added presentation_type column to abstract_submissions table');
     }
 } catch (error) {
     console.warn('Warning: Could not add column:', error.message);

@@ -550,6 +550,15 @@
                     </div>
 
                     <div class="form-group">
+                        <label>Presentation type</label>
+                        <select name="presentation_type">
+                            <option value="">Select</option>
+                            <option value="Oral presentation">Oral presentation</option>
+                            <option value="Poster">Poster</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
                         <label>Abstract</label>
                         <textarea name="abstract" rows="8"></textarea>
                     </div>
@@ -871,6 +880,11 @@
                             const topicEl = document.getElementById('topicSelect');
                             if (topicEl) topicEl.value = String(sub.topic);
                         }
+                    }
+                    if (sub.presentation_type && form.presentation_type) {
+                        form.presentation_type.value = sub.presentation_type;
+                    } else if (form.presentation_type) {
+                        form.presentation_type.value = '';
                     }
                     form.abstract.value = sub.abstract || '';
                     form.keywords.value = sub.keywords || '';

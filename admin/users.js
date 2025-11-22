@@ -771,6 +771,7 @@ async function viewUserCM(userId) {
             setText('cmAff', s.affiliation);
             const topicText = (s.topic || s.topic === 0) ? (TOPIC_LABELS[s.topic] || String(s.topic)) : '-';
             setText('cmTopic', topicText);
+            setText('cmPresentationType', s.presentation_type);
             setText('cmAbstractText', s.abstract);
             setText('cmKeywords', s.keywords);
 

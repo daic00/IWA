@@ -161,7 +161,7 @@ function fixFilenameEncoding(req, res, next) {
 // 提交摘要
 router.post('/abstract', requireAuth, upload.single('file'), fixFilenameEncoding, async (req, res) => {
     try {
-        const { title, authors, affiliation, topic, abstract, keywords } = req.body;
+        const { title, authors, affiliation, topic, abstract, keywords, presentation_type } = req.body;
         
         // 验证必填字段
         if (!title || !authors || !affiliation || !topic) {
@@ -207,11 +207,23 @@ router.post('/abstract', requireAuth, upload.single('file'), fixFilenameEncoding
             db.prepare(`
                 UPDATE abstract_submissions SET
                     title = ?, authors = ?, affiliation = ?, topic = ?,
-                    abstract = ?, keywords = ?, file_path = COALESCE(?, file_path),
+                    presentation_type = ?, abstract = ?, keywords = ?,
+                    file_path = COALESCE(?, file_path),
                     original_filename = COALESCE(?, original_filename),
                     updated_at = CURRENT_TIMESTAMP
                 WHERE user_id = ?
-            `).run(title, authors, affiliation, topicNumber, abstract, keywords, filePath, originalFilename, userId);
+            `).run(
+                title,
+                authors,
+                affiliation,
+                topicNumber,
+                presentation_type || null,
+                abstract,
+                keywords,
+                filePath,
+                originalFilename,
+                userId
+            );
             
             res.json({
                 success: true,
@@ -222,9 +234,21 @@ router.post('/abstract', requireAuth, upload.single('file'), fixFilenameEncoding
             // 插入新记录
             const result = db.prepare(`
                 INSERT INTO abstract_submissions (
-                    user_id, title, authors, affiliation, topic, abstract, keywords, file_path, original_filename
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `).run(userId, title, authors, affiliation, topicNumber, abstract, keywords, filePath, originalFilename);
+                    user_id, title, authors, affiliation, topic, presentation_type,
+                    abstract, keywords, file_path, original_filename
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+                userId,
+                title,
+                authors,
+                affiliation,
+                topicNumber,
+                presentation_type || null,
+                abstract,
+                keywords,
+                filePath,
+                originalFilename
+            );
             
             res.json({
                 success: true,
