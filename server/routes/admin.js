@@ -113,7 +113,11 @@ function buildConferenceManagementHtmlForPdf(user, payment, submission) {
   <title>${escapeHtmlForPdf(headerTitle)}</title>
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Noto Sans', 'Noto Sans CJK SC', 'Noto Sans CJK TC',
+                   'Noto Sans CJK JP', 'Noto Sans CJK KR',
+                   'WenQuanYi Zen Hei', 'Microsoft YaHei',
+                   -apple-system, BlinkMacSystemFont, 'Segoe UI',
+                   Roboto, sans-serif;
       font-size: 12px;
       color: #333;
       margin: 0;
@@ -267,7 +271,11 @@ function buildConferenceManagementBatchHtmlForPdf(entries, options = {}) {
   <title>${escapeHtmlForPdf(title)}</title>
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Noto Sans', 'Noto Sans CJK SC', 'Noto Sans CJK TC',
+                   'Noto Sans CJK JP', 'Noto Sans CJK KR',
+                   'WenQuanYi Zen Hei', 'Microsoft YaHei',
+                   -apple-system, BlinkMacSystemFont, 'Segoe UI',
+                   Roboto, sans-serif;
       font-size: 12px;
       color: #333;
       margin: 0;
@@ -526,7 +534,7 @@ router.get('/users/cm-pdf-batch', requireAdmin, async (req, res) => {
             return { user, payment, submission };
         });
 
-        const html = buildConferenceManagementBatchHtmlForPdf(entries, { title: 'Conference Management - Regular Users (Batch Export)' });
+        const html = buildConferenceManagementBatchHtmlForPdf(entries, { title: 'Conference Management' });
 
         let browser;
         try {
