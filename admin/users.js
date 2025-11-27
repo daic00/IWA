@@ -2,6 +2,7 @@
 let allUsers = [];
 let currentEditUserId = null;
 let adminCountryList = null;
+let currentViewCMUserId = null;
 // 分页相关
 let currentPage = 1;
 let pageSize = 10; // 初始 10
@@ -712,6 +713,7 @@ function renderAuthorsQuickOnly(raw) {
 }
 
 async function viewUserCM(userId) {
+    currentViewCMUserId = userId;
     const user = allUsers.find(u => u.id === userId);
     setText('cmUserName', user ? `${user.name} (ID: ${user.id})` : String(userId));
     document.getElementById('cmError').style.display = 'none';
@@ -832,68 +834,106 @@ function downloadCMFile() {
     document.body.removeChild(a);
 }
 
-// 导出 View 弹窗内容为 PDF
+// 导出 View 弹窗内容为 PDF（通过后端 HTML→PDF 接口）
 async function exportCMToPDF() {
+    if (!currentViewCMUserId) {
+        alert('No user selected for export.');
+        return;
+    }
     try {
-        const bodyEl = document.getElementById('cmBody');
-        if (!bodyEl) return;
+        const exportBtn = document.querySelector('#viewCMModal .modal-footer-actions button.btn-primary');
+        let originalHtml = '';
+        if (exportBtn) {
+            originalHtml = exportBtn.innerHTML;
+            exportBtn.disabled = true;
+            exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
+        }
         const nameText = (document.getElementById('cmUserName')?.textContent || 'User').trim();
-        document.body.classList.add('pdf-export');
-        await new Promise(r => setTimeout(r, 0));
-        const canvas = await html2canvas(bodyEl, { 
-            scale: 2, 
-            useCORS: true, 
-            backgroundColor: '#ffffff',
-            windowWidth: 1200, // force desktop-like layout regardless of device width
-            windowHeight: Math.max(bodyEl.scrollHeight, 1600),
-            scrollX: 0,
-            scrollY: 0,
-            ignoreElements: function(el) {
-                return el && el.classList && el.classList.contains('modal-footer-actions');
-            }
+        const response = await fetch(`/api/admin/users/${currentViewCMUserId}/cm-pdf`, {
+            credentials: 'include'
         });
-        const imgData = canvas.toDataURL('image/png');
-        const jspdfNS = window.jspdf || {};
-        const jsPDFCtor = jspdfNS.jsPDF;
-        if (!jsPDFCtor) {
-            alert('PDF library not loaded');
+        if (!response.ok) {
+            alert('Export failed.');
+            if (exportBtn) {
+                exportBtn.disabled = false;
+                exportBtn.innerHTML = originalHtml || '<i class="fas fa-file-pdf"></i> Export PDF';
+            }
             return;
         }
-        const pdf = new jsPDFCtor('p', 'mm', 'a4');
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        const margin = 10;
-        const headerY = 15;
-        const startY = 25;
-        const header = `Conference Management - ${nameText}`;
-
-        pdf.setFontSize(12);
-        pdf.text(header, margin, headerY);
-
-        const imgWidth = pageWidth - margin * 2;
-        const imgHeight = canvas.height * imgWidth / canvas.width;
-        let heightLeft = imgHeight;
-        let position = startY;
-
-        pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
-        heightLeft -= (pageHeight - position - margin);
-
-        while (heightLeft > 0) {
-            pdf.addPage();
-            pdf.setFontSize(12);
-            pdf.text(header, margin, headerY);
-            position = startY - (imgHeight - heightLeft);
-            pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
-            heightLeft -= (pageHeight - startY - margin);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const safeName = nameText
+            .replace(/[^a-zA-Z0-9-_\s]/g, '')
+            .replace(/\s+/g, '_') || 'User';
+        a.download = `Conference_${safeName}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        if (exportBtn) {
+            exportBtn.disabled = false;
+            exportBtn.innerHTML = originalHtml || '<i class="fas fa-file-pdf"></i> Export PDF';
         }
-
-        const safeName = nameText.replace(/[^a-zA-Z0-9-_\s]/g, '').replace(/\s+/g, '_');
-        pdf.save(`Conference_${safeName}.pdf`);
     } catch (e) {
         console.error('Export PDF error:', e);
         alert('Export failed.');
-    } finally {
-        document.body.classList.remove('pdf-export');
+        const exportBtn = document.querySelector('#viewCMModal .modal-footer-actions button.btn-primary');
+        if (exportBtn) {
+            exportBtn.disabled = false;
+            exportBtn.innerHTML = '<i class="fas fa-file-pdf"></i> Export PDF';
+        }
+    }
+}
+
+// 批量导出所有普通用户的 Conference Management PDF
+async function exportAllUsersCMToPDF() {
+    try {
+        const btn = document.getElementById('exportAllUsersBtn');
+        let originalHtml = '';
+        if (btn) {
+            originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
+        }
+        const response = await fetch('/api/admin/users/cm-pdf-batch', {
+            credentials: 'include'
+        });
+        if (!response.ok) {
+            let debugText = '';
+            try {
+                debugText = await response.text();
+            } catch (_) {}
+            console.error('Batch export failed, status:', response.status, debugText);
+            alert('Batch export failed.');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml || '<i class="fas fa-file-export"></i> Export All Users';
+            }
+            return;
+        }
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Conference_All_Regular_Users.pdf';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml || '<i class="fas fa-file-export"></i> Export All Users';
+        }
+    } catch (e) {
+        console.error('Batch export error:', e);
+        alert('Batch export failed.');
+        const btn = document.getElementById('exportAllUsersBtn');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-file-export"></i> Export All Users';
+        }
     }
 }
 

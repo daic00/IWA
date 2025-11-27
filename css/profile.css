@@ -519,6 +519,15 @@ body {
     font-size: 0.9rem;
     font-style: italic;
     margin-bottom: var(--space-sm);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.bank-note i {
+    color: var(--color-error);
+    margin-top: 0.1rem;
+    flex-shrink: 0;
 }
 
 .info-grid {

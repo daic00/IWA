@@ -279,17 +279,24 @@
 
         .search-box {
             display: flex;
-            gap: 1rem;
+            align-items: stretch;
+            gap: 0.75rem;
             flex: 1;
-            max-width: 500px;
+            max-width: 700px;
         }
 
         .search-input {
-            flex: 1;
+            flex: 1 1 auto;
             padding: 0.75rem 1rem;
             border: 1px solid #ddd;
             border-radius: 8px;
             font-size: 0.9rem;
+        }
+
+        .search-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
         }
 
         .btn {
@@ -339,6 +346,18 @@
 
         .btn-secondary:hover {
             background: #5a6268;
+        }
+
+        .btn-outline-info {
+            background: #e8f4ff;
+            color: #0d6efd;
+            border: 1px solid #b6d5ff;
+        }
+
+        .btn-outline-info:hover {
+            background: #d4e8ff;
+            color: #0b5ed7;
+            border-color: #91c2ff;
         }
 
         .btn-sm {
@@ -880,7 +899,18 @@
             }
 
             .search-box {
+                flex-direction: column;
                 max-width: 100%;
+                width: 100%;
+            }
+
+            .search-actions {
+                width: 100%;
+            }
+
+            .search-actions .btn {
+                flex: 1;
+                justify-content: center;
             }
 
             .users-table {
@@ -923,11 +953,7 @@
             .stat-value { font-size: 1rem; }
             .stat-label { font-size: 0.62rem; }
             .panel-header { display: grid; grid-template-columns: 1fr; gap: 0.5rem; width: 100%; }
-            /* Keep search and button on the same row with proportional widths */
-            .search-box { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); align-items: stretch; gap: 0.4rem; width: 100%; }
-            .search-input { flex: 0 0 auto; width: 100%; min-width: 0; }
-            .search-box { max-width: 100%; min-width: 0; }
-            .search-box .btn { width: 100%; max-width: 100%; justify-content: center; min-width: 0; box-sizing: border-box; }
+            .search-box { width: 100%; max-width: 100%; }
         }
 
         /* Ensure 3 columns also on small phones up to 600px */
@@ -940,10 +966,7 @@
             .stat-value { font-size: 1.02rem !important; }
             .stat-label { font-size: 0.64rem !important; }
             .panel-header { grid-template-columns: 1fr; }
-            /* Two-thirds for input, one-third for button */
-            .search-box { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 0.5rem; max-width: 100%; width: 100%; align-items: stretch; }
-            .search-input { width: 100%; min-width: 0; }
-            .search-box .btn { width: 100%; }
+            .search-box { max-width: 100%; width: 100%; }
         }
     </style>
 </head>
@@ -1045,6 +1068,9 @@
                     <input type="text" class="search-input" id="searchInput" placeholder="Search by name or username...">
                     <button class="btn btn-success" onclick="openAddUserModal()">
                         <i class="fas fa-user-plus"></i> Add User
+                    </button>
+                    <button class="btn btn-outline-info" onclick="exportAllUsersCMToPDF()" id="exportAllUsersBtn">
+                        <i class="fas fa-file-export"></i> Export All Users
                     </button>
                 </div>
             </div>
