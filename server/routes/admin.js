@@ -513,11 +513,11 @@ router.get('/users/:id/abstract', requireAdmin, (req, res) => {
 // Export Conference Management data for all regular (non-admin) users as a single PDF
 router.get('/users/cm-pdf-batch', requireAdmin, async (req, res) => {
     try {
-        // 默认导出所有非管理员用户
         const users = db.prepare(`
             SELECT id, username, name, organization, receipt_number, is_admin
             FROM users
             WHERE is_admin = 0
+            AND username != 'test'
             ORDER BY datetime(created_at) ASC
         `).all();
 
@@ -846,9 +846,15 @@ router.delete('/users/:id', requireAdmin, (req, res) => {
                 message: 'User not found' 
             });
         }
+
+        const deleteUserWithRelations = db.transaction((uid) => {
+            db.prepare('DELETE FROM fee_payments WHERE user_id = ?').run(uid);
+            db.prepare('DELETE FROM abstract_submissions WHERE user_id = ?').run(uid);
+            db.prepare('DELETE FROM admin_logs WHERE admin_id = ? OR target_user_id = ?').run(uid, uid);
+            db.prepare('DELETE FROM users WHERE id = ?').run(uid);
+        });
         
-        // 删除用户
-        db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+        deleteUserWithRelations(userId);
         
         // 记录日志
         logAdminAction(req.session.userId, 'delete_user', userId, user.username, 
