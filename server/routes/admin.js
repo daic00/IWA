@@ -92,7 +92,7 @@ function formatAuthorsForPdf(raw) {
 }
 
 function formatAuthorsForExcel(raw) {
-    if (!raw) return '-';
+    if (!raw) return '';
     let authors = [];
     try {
         const parsed = JSON.parse(raw);
@@ -107,7 +107,7 @@ function formatAuthorsForExcel(raw) {
             });
         }
     }
-    if (!authors.length) return '-';
+    if (!authors.length) return '';
     return authors.map((a, index) => {
         const fn = (a.firstName || '').trim();
         const sn = (a.surname || '').trim();
@@ -1176,7 +1176,7 @@ router.get('/users/cm-excel-batch', requireAdmin, async (req, res) => {
             const topicKey = submission && submission.topic !== null && submission.topic !== undefined
                 ? Math.floor(Number(submission.topic))
                 : null;
-            const topicText = topicKey ? (TOPIC_LABELS[topicKey] || String(topicKey)) : '-';
+            const topicText = topicKey !== null ? (TOPIC_LABELS[topicKey] || String(topicKey)) : '';
 
             sheet.addRow([
                 safeCellValue(user.id),
