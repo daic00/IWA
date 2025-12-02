@@ -841,7 +841,7 @@ async function exportCMToPDF() {
         return;
     }
     try {
-        const exportBtn = document.querySelector('#viewCMModal .modal-footer-actions button.btn-primary');
+        const exportBtn = document.getElementById('exportCMPdfBtn');
         let originalHtml = '';
         if (exportBtn) {
             originalHtml = exportBtn.innerHTML;
@@ -879,7 +879,7 @@ async function exportCMToPDF() {
     } catch (e) {
         console.error('Export PDF error:', e);
         alert('Export failed.');
-        const exportBtn = document.querySelector('#viewCMModal .modal-footer-actions button.btn-primary');
+        const exportBtn = document.getElementById('exportCMPdfBtn');
         if (exportBtn) {
             exportBtn.disabled = false;
             exportBtn.innerHTML = '<i class="fas fa-file-pdf"></i> Export PDF';
