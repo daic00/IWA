@@ -887,6 +887,59 @@ async function exportCMToPDF() {
     }
 }
 
+// 导出单个用户的 Conference Management Excel
+async function exportCMToExcel() {
+    if (!currentViewCMUserId) {
+        alert('No user selected for export.');
+        return;
+    }
+    try {
+        const exportBtn = document.getElementById('exportCMExcelBtn');
+        let originalHtml = '';
+        if (exportBtn) {
+            originalHtml = exportBtn.innerHTML;
+            exportBtn.disabled = true;
+            exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
+        }
+        const nameText = (document.getElementById('cmUserName')?.textContent || 'User').trim();
+        const response = await fetch(`/api/admin/users/${currentViewCMUserId}/cm-excel`, {
+            credentials: 'include'
+        });
+        if (!response.ok) {
+            alert('Export failed.');
+            if (exportBtn) {
+                exportBtn.disabled = false;
+                exportBtn.innerHTML = originalHtml || '<i class="fas fa-file-excel"></i> Export Excel';
+            }
+            return;
+        }
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const safeName = nameText
+            .replace(/[^a-zA-Z0-9-_\s]/g, '')
+            .replace(/\s+/g, '_') || 'User';
+        a.download = `Conference_${safeName}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        if (exportBtn) {
+            exportBtn.disabled = false;
+            exportBtn.innerHTML = originalHtml || '<i class="fas fa-file-excel"></i> Export Excel';
+        }
+    } catch (e) {
+        console.error('Export Excel error:', e);
+        alert('Export failed.');
+        const exportBtn = document.getElementById('exportCMExcelBtn');
+        if (exportBtn) {
+            exportBtn.disabled = false;
+            exportBtn.innerHTML = '<i class="fas fa-file-excel"></i> Export Excel';
+        }
+    }
+}
+
 // 批量导出所有普通用户的 Conference Management PDF
 async function exportAllUsersCMToPDF() {
     try {
@@ -933,6 +986,56 @@ async function exportAllUsersCMToPDF() {
         if (btn) {
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-file-export"></i> Export All Users';
+        }
+    }
+}
+
+// 批量导出所有普通用户的 Conference Management Excel
+async function exportAllUsersCMToExcel() {
+    try {
+        const btn = document.getElementById('exportAllUsersExcelBtn');
+        let originalHtml = '';
+        if (btn) {
+            originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
+        }
+        const response = await fetch('/api/admin/users/cm-excel-batch', {
+            credentials: 'include'
+        });
+        if (!response.ok) {
+            let debugText = '';
+            try {
+                debugText = await response.text();
+            } catch (_) {}
+            console.error('Batch Excel export failed, status:', response.status, debugText);
+            alert('Batch export failed.');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml || '<i class="fas fa-file-excel"></i> Export All (Excel)';
+            }
+            return;
+        }
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Conference_All_Regular_Users.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml || '<i class="fas fa-file-excel"></i> Export All (Excel)';
+        }
+    } catch (e) {
+        console.error('Batch Excel export error:', e);
+        alert('Batch export failed.');
+        const btn = document.getElementById('exportAllUsersExcelBtn');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-file-excel"></i> Export All (Excel)';
         }
     }
 }

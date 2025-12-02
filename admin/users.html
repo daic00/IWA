@@ -281,8 +281,8 @@
             display: flex;
             align-items: stretch;
             gap: 0.75rem;
-            flex: 1;
-            max-width: 700px;
+            flex: 1 1 0;
+            min-width: 0;
         }
 
         .search-input {
@@ -358,6 +358,28 @@
             background: #d4e8ff;
             color: #0b5ed7;
             border-color: #91c2ff;
+        }
+
+        /* Export buttons: calm, neutral background; use icon colors for PDF/Excel semantics */
+        .btn-export-pdf,
+        .btn-export-excel {
+            background: #e8eef8;         /* slightly deeper than before */
+            color: #15406e;              /* stronger text color */
+            border: 1px solid #c3ccdd;
+        }
+
+        .btn-export-pdf:hover,
+        .btn-export-excel:hover {
+            background: #dde5f3;
+            border-color: #b3bed3;
+        }
+
+        .btn-export-pdf i {
+            color: #d04437; /* PDF red, small area only */
+        }
+
+        .btn-export-excel i {
+            color: #1d6f42; /* Excel green, small area only */
         }
 
         .btn-sm {
@@ -667,6 +689,17 @@
             margin-top: 1rem;
         }
 
+        @media (max-width: 600px) {
+            .modal-footer-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .modal-footer-actions .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
         .form-group {
             margin-bottom: 1.5rem;
         }
@@ -933,6 +966,11 @@
             .actions-compact {
                 display: inline-flex;
             }
+
+            /* 在桌面端防止顶部导出按钮文字换行，利用横向空间 */
+            .panel-header .btn {
+                white-space: nowrap;
+            }
         }
 
         @media (max-width: 1024px) {
@@ -1034,7 +1072,8 @@
 
                 <div class="modal-footer-actions">
                     <button id="cmDownloadBtn" class="btn btn-success btn-sm" onclick="downloadCMFile()" disabled><i class="fas fa-download"></i> Download File</button>
-                    <button class="btn btn-primary btn-sm" onclick="exportCMToPDF()"><i class="fas fa-file-pdf"></i> Export PDF</button>
+                    <button class="btn btn-export-pdf btn-sm" onclick="exportCMToPDF()"><i class="fas fa-file-pdf"></i> Export PDF</button>
+                    <button id="exportCMExcelBtn" class="btn btn-export-excel btn-sm" onclick="exportCMToExcel()"><i class="fas fa-file-excel"></i> Export Excel</button>
                 </div>
             </div>
         </div>
@@ -1069,8 +1108,11 @@
                     <button class="btn btn-success" onclick="openAddUserModal()">
                         <i class="fas fa-user-plus"></i> Add User
                     </button>
-                    <button class="btn btn-outline-info" onclick="exportAllUsersCMToPDF()" id="exportAllUsersBtn">
-                        <i class="fas fa-file-export"></i> Export All Users
+                    <button class="btn btn-export-pdf" onclick="exportAllUsersCMToPDF()" id="exportAllUsersBtn">
+                        <i class="fas fa-file-pdf"></i> Export PDF (All)
+                    </button>
+                    <button class="btn btn-export-excel" onclick="exportAllUsersCMToExcel()" id="exportAllUsersExcelBtn">
+                        <i class="fas fa-file-excel"></i> Export Excel (All)
                     </button>
                 </div>
             </div>

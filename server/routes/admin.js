@@ -6,6 +6,7 @@ const { requireAdmin, validateUsername, validatePassword } = require('../middlew
 const path = require('path');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
+const ExcelJS = require('exceljs');
 
 const TOPIC_LABELS = {
     1: 'Session 1: Water Quality Security and Digital Technology',
@@ -88,6 +89,36 @@ function formatAuthorsForPdf(raw) {
         return `${index + 1}) ${full}`;
     }).join('\n');
     return escapeHtmlForPdf(joined);
+}
+
+function formatAuthorsForExcel(raw) {
+    if (!raw) return '-';
+    let authors = [];
+    try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) authors = parsed;
+    } catch (e) {
+        const lines = String(raw || '').split('\n').map(s => s.trim()).filter(Boolean);
+        if (lines.length) {
+            authors = lines.map(line => {
+                const firstChunk = line.split(',')[0] || '';
+                const parts = firstChunk.split(' ').filter(Boolean);
+                return { firstName: parts[0] || '', surname: parts.slice(1).join(' ') };
+            });
+        }
+    }
+    if (!authors.length) return '-';
+    return authors.map((a, index) => {
+        const fn = (a.firstName || '').trim();
+        const sn = (a.surname || '').trim();
+        const full = [fn, sn].filter(Boolean).join(' ') || '-';
+        return `${index + 1}) ${full}`;
+    }).join('\n');
+}
+
+function safeCellValue(value) {
+    if (value === null || value === undefined || value === '') return '-';
+    return String(value);
 }
 
 function buildConferenceManagementHtmlForPdf(user, payment, submission) {
@@ -637,6 +668,129 @@ router.get('/users/:id/cm-pdf', requireAdmin, async (req, res) => {
     }
 });
 
+router.get('/users/:id/cm-excel', requireAdmin, async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id, 10);
+        if (Number.isNaN(userId)) {
+            return res.status(400).json({ success: false, message: 'Invalid user ID' });
+        }
+
+        const user = db.prepare(`
+            SELECT id, username, name, organization, receipt_number
+            FROM users
+            WHERE id = ?
+        `).get(userId);
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        const payment = db.prepare('SELECT * FROM fee_payments WHERE user_id = ?').get(userId) || {};
+        const submission = db.prepare('SELECT * FROM abstract_submissions WHERE user_id = ?').get(userId) || {};
+        if (submission && submission.topic !== null && submission.topic !== undefined) {
+            submission.topic = Math.floor(Number(submission.topic));
+        }
+
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('Conference Management');
+
+        const countryDisplay = resolveCountryDisplay(payment.country);
+        const topicKey = submission && submission.topic !== null && submission.topic !== undefined
+            ? Math.floor(Number(submission.topic))
+            : null;
+        const topicText = topicKey ? (TOPIC_LABELS[topicKey] || String(topicKey)) : '-';
+
+        const feeHeaders = [
+            'Paper Number',
+            'Receipt Number',
+            'Gender',
+            'Email',
+            'Category',
+            'Institution',
+            'Country/Region',
+            'State/Province',
+            'City',
+            'Address',
+            'Zip Code',
+            'Affiliation',
+            'Mobile Phone',
+            'Remarks'
+        ];
+
+        const abstractHeaders = [
+            'Title',
+            'Authors',
+            'Affiliation',
+            'Topic',
+            'Presentation type',
+            'Abstract',
+            'Keywords',
+            'File'
+        ];
+
+        const headerValues = ['ID', 'Name', 'Username'].concat(feeHeaders).concat(abstractHeaders);
+        const headerRow = sheet.getRow(1);
+        headerRow.values = headerValues;
+        headerRow.font = { bold: true, size: 12 };
+        headerRow.height = 24;
+        headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
+        sheet.addRow([
+            safeCellValue(user.id),
+            safeCellValue(user.name),
+            safeCellValue(user.username),
+            safeCellValue(payment.paper_number),
+            safeCellValue(user.receipt_number),
+            safeCellValue(payment.gender),
+            safeCellValue(payment.email),
+            safeCellValue(payment.participant_category),
+            safeCellValue(payment.institution),
+            safeCellValue(countryDisplay),
+            safeCellValue(payment.state_province),
+            safeCellValue(payment.city),
+            safeCellValue(payment.address),
+            safeCellValue(payment.zip_code),
+            safeCellValue(payment.affiliation),
+            safeCellValue(payment.mobile_phone),
+            safeCellValue(payment.remarks),
+            safeCellValue(submission.title),
+            safeCellValue(formatAuthorsForExcel(submission.authors)),
+            safeCellValue(submission.affiliation),
+            safeCellValue(topicText),
+            safeCellValue(submission.presentation_type),
+            safeCellValue(submission.abstract),
+            safeCellValue(submission.keywords),
+            safeCellValue(submission.original_filename || submission.file_path)
+        ]);
+
+        sheet.columns.forEach(col => {
+            let maxLength = 10;
+            col.eachCell({ includeEmpty: true }, cell => {
+                const value = cell.value;
+                const text = value === null || value === undefined ? '' : String(value);
+                if (text.length > maxLength) maxLength = text.length;
+            });
+            col.width = Math.min(40, maxLength + 2);
+        });
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const excelBuffer = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+
+        const rawName = user.name || `User_${user.id}`;
+        const safeName = String(rawName)
+            .replace(/[^a-zA-Z0-9-_\s]/g, '')
+            .replace(/\s+/g, '_') || `User_${user.id}`;
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="Conference_${safeName}.xlsx"`);
+        res.setHeader('Content-Length', String(excelBuffer.length));
+        return res.end(excelBuffer);
+    } catch (error) {
+        console.error('Admin export CM Excel error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to export Excel' });
+    }
+});
+
 // 检查管理员权限
 router.get('/check', requireAdmin, (req, res) => {
     res.json({ success: true });
@@ -953,6 +1107,127 @@ router.get('/stats', requireAdmin, (req, res) => {
             success: false, 
             message: 'Failed to get statistics' 
         });
+    }
+});
+
+router.get('/users/cm-excel-batch', requireAdmin, async (req, res) => {
+    try {
+        const users = db.prepare(`
+            SELECT id, username, name, organization, receipt_number, is_admin
+            FROM users
+            WHERE is_admin = 0
+            AND username != 'test'
+            ORDER BY datetime(created_at) ASC
+        `).all();
+
+        if (!users || users.length === 0) {
+            return res.status(400).json({ success: false, message: 'No regular users to export.' });
+        }
+
+        const entries = users.map(user => {
+            const payment = db.prepare('SELECT * FROM fee_payments WHERE user_id = ?').get(user.id) || {};
+            const submission = db.prepare('SELECT * FROM abstract_submissions WHERE user_id = ?').get(user.id) || {};
+            if (submission && submission.topic !== null && submission.topic !== undefined) {
+                submission.topic = Math.floor(Number(submission.topic));
+            }
+            return { user, payment, submission };
+        });
+
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('Conference Management');
+
+        const feeHeaders = [
+            'Paper Number',
+            'Receipt Number',
+            'Gender',
+            'Email',
+            'Category',
+            'Institution',
+            'Country/Region',
+            'State/Province',
+            'City',
+            'Address',
+            'Zip Code',
+            'Affiliation',
+            'Mobile Phone',
+            'Remarks'
+        ];
+
+        const abstractHeaders = [
+            'Title',
+            'Authors',
+            'Affiliation',
+            'Topic',
+            'Presentation type',
+            'Abstract',
+            'Keywords',
+            'File'
+        ];
+
+        const headerValues = ['ID', 'Name', 'Username'].concat(feeHeaders).concat(abstractHeaders);
+        const headerRow = sheet.getRow(1);
+        headerRow.values = headerValues;
+        headerRow.font = { bold: true, size: 12 };
+        headerRow.height = 24;
+        headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
+        entries.forEach(({ user, payment, submission }) => {
+            const countryDisplay = resolveCountryDisplay(payment.country);
+            const topicKey = submission && submission.topic !== null && submission.topic !== undefined
+                ? Math.floor(Number(submission.topic))
+                : null;
+            const topicText = topicKey ? (TOPIC_LABELS[topicKey] || String(topicKey)) : '-';
+
+            sheet.addRow([
+                safeCellValue(user.id),
+                safeCellValue(user.name),
+                safeCellValue(user.username),
+                safeCellValue(payment.paper_number),
+                safeCellValue(user.receipt_number),
+                safeCellValue(payment.gender),
+                safeCellValue(payment.email),
+                safeCellValue(payment.participant_category),
+                safeCellValue(payment.institution),
+                safeCellValue(countryDisplay),
+                safeCellValue(payment.state_province),
+                safeCellValue(payment.city),
+                safeCellValue(payment.address),
+                safeCellValue(payment.zip_code),
+                safeCellValue(payment.affiliation),
+                safeCellValue(payment.mobile_phone),
+                safeCellValue(payment.remarks),
+                safeCellValue(submission.title),
+                safeCellValue(formatAuthorsForExcel(submission.authors)),
+                safeCellValue(submission.affiliation),
+                safeCellValue(topicText),
+                safeCellValue(submission.presentation_type),
+                safeCellValue(submission.abstract),
+                safeCellValue(submission.keywords),
+                safeCellValue(submission.original_filename || submission.file_path)
+            ]);
+        });
+
+        sheet.columns.forEach(col => {
+            let maxLength = 10;
+            col.eachCell({ includeEmpty: true }, cell => {
+                const value = cell.value;
+                const text = value === null || value === undefined ? '' : String(value);
+                if (text.length > maxLength) maxLength = text.length;
+            });
+            col.width = Math.min(40, maxLength + 2);
+        });
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const excelBuffer = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+
+        const fileName = 'Conference_All_Regular_Users.xlsx';
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        res.setHeader('Content-Length', String(excelBuffer.length));
+        return res.end(excelBuffer);
+    } catch (error) {
+        console.error('Admin export CM batch Excel error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to export batch Excel' });
     }
 });
 
